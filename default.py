@@ -279,22 +279,24 @@ def sub_release(params):
 
     html = get_html(sections['view_release'] + '/' + params['r'])
 
-    if len(common.parseDOM(html, 'div', attrs={'class':'swiper-wrapper'})) == 0: 
-        img = BASE_URL + common.parseDOM(html, 'a', attrs={'data-fancybox':'cover2'}, ret='href')[0]
-        fanart = img
-    else:
-        imgs = common.parseDOM(html, 'a', attrs={'data-fancybox':'cover'}, ret='href')
-        if len(imgs) > 0:
-            img = BASE_URL + imgs[0]
+    covers = common.parseDOM(html, 'a', attrs={'class':'release-slider__item'}, ret='href')
+
+    img = ''
+    fanart = ''
+
+    if len(covers) > 0:
+        img = BASE_URL + covers[0]
+
+        if len(covers) > 1:
+            fanart = BASE_URL + covers[1]
+        else:
             fanart = img
-        if len(imgs) > 1:
-            fanart = BASE_URL + imgs[1]
 
     if addon.getSetting('HideOnline') == 'false':
         # online if exist
-        if len(common.parseDOM(html, 'a', attrs={'data-lc-categories':'online'}, ret='href')) > 0:
-            plots = common.parseDOM(html, 'a', attrs={'data-lc-categories':'online'})
-            videos = common.parseDOM(html, 'a', attrs={'data-lc-categories':'online'}, ret='href')
+        if len(common.parseDOM(html, 'a', attrs={'data-fancybox':'online'}, ret='href')) > 0:
+            plots = common.parseDOM(html, 'a', attrs={'data-fancybox':'online'})
+            videos = common.parseDOM(html, 'a', attrs={'data-fancybox':'online'}, ret='href')
 
             for i, v in enumerate(videos):
                 # support only sibnet.ru
