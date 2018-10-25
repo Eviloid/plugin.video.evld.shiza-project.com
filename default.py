@@ -105,23 +105,27 @@ def get_html(url, params={}, post={}, noerror=True):
     return html 
 
 
-def get_sibnet_url(url):
+def get_sibnet_data(url):
     html = get_html(url)
 
-    src = 'Видео не найдено'
+    res = {'url':'Видео не найдено', 'thumb':''}
 
     s = re.search(r'<div class=videostatus><p>(.*?)</p>', html)
     if s:
-        return s.group(1).decode('cp1251')
+        res['url'] = s.group(1).decode('cp1251')
+    else:
+        p = re.compile('player.src(.*?);')
+        if p:
+            js = p.findall(html)
+            s = re.compile(',{src: "(.*?)"')
+            if js:
+                res['url'] = 'http://video.sibnet.ru/' + s.findall(js[0])[0]
 
-    p = re.compile('player.src(.*?);')
-    if p:
-        js = p.findall(html)
-        s = re.compile(',{src: "(.*?)"')
-        if js:
-            src = 'http://video.sibnet.ru/' + s.findall(js[0])[0]
+        s = re.search(r'meta property="og:image" content="(.*?)"/>', html)
+        if s:
+            res['thumb'] = s.group(1)
 
-    return src
+    return res
 
 
 def main_menu():
@@ -302,10 +306,12 @@ def sub_release(params):
                 # support only sibnet.ru
                 if 'sibnet.ru' in v:
                     title = common.parseDOM(plots[i], 'p')[0]
-                    url = get_sibnet_url(v)
+                    data = get_sibnet_data(v)
+                    url = data['url']
+                    thumb = data['thumb']
 
                     if url[:4] == 'http':
-                        add_item(title, {}, fanart=fanart, banner=img, poster=img, url=url, isFolder=False, isPlayable=True)
+                        add_item(title, {}, fanart=fanart, banner=img, poster=img, thumb=thumb, url=url, isFolder=False, isPlayable=True)
                     else:
                         title = '[COLOR red] %s [/COLOR]' % title
                         url = '[COLOR red] %s [/COLOR]' % url
