@@ -6,7 +6,7 @@
     </category>
     <category label="Просмотр">
         <setting id="Mode" type="enum" label="Режим" default="0" values="Torrent|Online" visible="false"/>
-        <setting id="Engine" type="enum" label="Плеер" default="0" values="T2Http|YATP" visible="eq(-1,0)"/>
+        <setting id="Engine" type="enum" label="Плеер" default="0" values="T2Http|YATP|TAM" visible="eq(-1,0)"/>
         <setting id="HideOnline" type="bool" label="Скрыть on-line" default="false" visible="true"/>
     </category>
     <category label="Разное">

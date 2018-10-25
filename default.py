@@ -374,44 +374,47 @@ def sub_series(params):
         xbmcplugin.endOfDirectory(handle)
         xbmc.executebuiltin('Container.SetViewMode(55)')
     except:
-        xbmc.executebuiltin('PlayMedia("plugin://plugin.video.evld.shiza-project.com/?mode=play&id=' + urllib.quote_plus(id) + '")')
+        pass
 
 
-def sub_play_yatp(params):
-    i = params.get('i', 0)
-    url = sections['get_torrent'] + '/' + params['r'] + '/' + params['t']
-
-    torrent = get_html(url)
-    temp_name = os.path.join(xbmc.translatePath('special://temp/'), 'shiza.torrent')
-    temp_file = open(temp_name, "wb")
-    temp_file.write(torrent)
-    purl = 'plugin://plugin.video.yatp/?action=play&torrent=' + urllib.quote_plus(temp_name) + '&file_index=' + str(i)
+def sub_play_yatp(url, ind):
+    purl = 'plugin://plugin.video.yatp/?action=play&torrent=' + urllib.quote_plus(url) + '&file_index=' + str(ind)
     item = xbmcgui.ListItem(path=purl)
     xbmcplugin.setResolvedUrl(handle, True, item)
 
 
-def sub_play(params):
-    if addon.getSetting('Engine') == '1':
-        sub_play_yatp(params)
-        return
+def sub_play_tam(url, ind):
+	purl ='plugin://plugin.video.tam/?mode=play&url='+ urllib.quote_plus(url) + '&ind=' + str(ind)
+	item = xbmcgui.ListItem(path=purl)
+	xbmcplugin.setResolvedUrl(handle, True, item)
 
-    # else torrent2http
+
+def sub_play(params):
     file_id = int(params.get('i', 0))
     uri = sections['get_torrent'] + '/' + params['r'] + '/' + params['t']
     
     torrent = get_html(uri)
 
     temp_name = os.path.join(xt('special://temp/'), 'shiza.torrent')
+
     if sys.platform.startswith('win'):
         temp_name = temp_name.replace('\\', '//')
-
-    #, cwd=os.path.dirname(binary_path)) in torrent2html engine.py
 
     temp_file = open(temp_name, "wb")
     temp_file.write(torrent)
     temp_file.close()
 
     uri = "file://" + temp_name
+
+    if addon.getSetting('Engine') == '1':
+        sub_play_yatp(uri, file_id)
+        return
+
+    if addon.getSetting('Engine') == '2':
+        sub_play_tam(uri, file_id)
+        return
+
+    #, cwd=os.path.dirname(binary_path)) in torrent2html engine.py
 
     from torrent2http import State, Engine, MediaType
     progressBar = xbmcgui.DialogProgress()
