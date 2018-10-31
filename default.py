@@ -189,6 +189,11 @@ def sub_menu(params):
 
         if not data['enabled']: title = '[COLOR red] %s [/COLOR]' % title
 
+        if addon.getSetting('ShowDescriptions') != 'true':
+            desc = common.parseDOM(release, 'span', attrs={'class':'relstatus'})
+            if len(desc) <> 0:
+                data['plot'] = desc[0].strip()
+
         release_id = URL_RE.match(url).group(6)
 
         add_item(title, {'mode':'release', 'r':release_id}, fanart=img, banner=img, poster=img, plot=data['plot'])
@@ -214,6 +219,11 @@ def sub_favorite(params):
         data = get_release_info(url)
 
         if not data['enabled']: title = '[COLOR red] %s [/COLOR]' % title
+
+        if addon.getSetting('ShowDescriptions') != 'true':
+            desc = common.parseDOM(release, 'p', attrs={'class':'description'})
+            if len(desc) <> 0:
+                data['plot'] = common.stripTags(common.replaceHTMLCodes(desc[0]).strip())
 
         release_id = URL_RE.match(url).group(6)
 
