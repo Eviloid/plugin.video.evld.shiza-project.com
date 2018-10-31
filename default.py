@@ -119,7 +119,7 @@ def get_sibnet_data(url):
             js = p.findall(html)
             s = re.compile(',{src: "(.*?)"')
             if js:
-                res['url'] = 'http://video.sibnet.ru/' + s.findall(js[0])[0]
+                res['url'] = 'https://video.sibnet.ru' + s.findall(js[0])[0]
 
         s = re.search(r'meta property="og:image" content="(.*?)"/>', html)
         if s:
