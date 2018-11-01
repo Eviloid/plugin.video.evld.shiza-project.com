@@ -81,14 +81,20 @@ def checkauth():
     return isinstance(html, basestring)
 
 
-def get_html(url, params={}, post={}, noerror=True):
-    headers = {'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3',
-    'Content-Type':'application/x-www-form-urlencoded'}
+def get_html(url, params={}, post={}, noerror=True, referer=None):
+
+    req = urllib2.Request('%s?%s' % (url, urllib.urlencode(params)), urllib.urlencode(post))
+    req.add_header('User-Agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3')
+    req.add_header('Content-Type', 'application/x-www-form-urlencoded')
+    if referer:
+        req.add_header('Referer', referer)
 
     html = ''
 
     try:
-        conn = urllib2.urlopen(urllib2.Request('%s?%s' % (url, urllib.urlencode(params)), urllib.urlencode(post), headers))
+        conn = urllib2.urlopen(req)
+        if conn.geturl() != req.get_full_url():
+            return conn.geturl()
         html = conn.read()
         conn.close()
     except urllib2.HTTPError, err:
@@ -119,7 +125,8 @@ def get_sibnet_data(url):
             js = p.findall(html)
             s = re.compile(',{src: "(.*?)"')
             if js:
-                res['url'] = 'https://video.sibnet.ru' + s.findall(js[0])[0]
+                temp_url = 'https://video.sibnet.ru' + s.findall(js[0])[0]
+                res['url'] = get_html(temp_url, referer=url)
 
         s = re.search(r'meta property="og:image" content="(.*?)"/>', html)
         if s:
@@ -178,7 +185,7 @@ def sub_menu(params):
 
     html = get_html(sections[params['mode']], {'page':page})
 
-    releases = common.parseDOM(html, 'div', attrs={'class': 'card-box'})
+    releases = common.parseDOM(html, 'div', attrs={'class':'card-box'})
 
     for release in releases:
         title = common.parseDOM(release, 'img', ret = 'title')[0].replace('  ', ' ')
@@ -209,7 +216,7 @@ def sub_favorite(params):
 
     html = get_html(sections[params['mode']], {'page':page})
 
-    releases = common.parseDOM(html, 'article', attrs={'class': 'grid-list'})
+    releases = common.parseDOM(html, 'article', attrs={'class':'grid-list'})
 
     for release in releases:
         title = common.parseDOM(release, 'h5', attrs={'class':'card-title'})[0]
@@ -260,7 +267,7 @@ def do_find(params):
 
     html = get_html(sections[params['mode']], {'page':page, 'q':q})
 
-    releases = common.parseDOM(html, 'article', attrs={'class': 'grid-list'})
+    releases = common.parseDOM(html, 'article', attrs={'class':'grid-list'})
 
     for release in releases:
         title = common.parseDOM(release, 'h5', attrs={'class':'card-title'})[0]
