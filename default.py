@@ -81,20 +81,14 @@ def checkauth():
     return isinstance(html, basestring)
 
 
-def get_html(url, params={}, post={}, noerror=True, referer=None):
-
-    req = urllib2.Request('%s?%s' % (url, urllib.urlencode(params)), urllib.urlencode(post))
-    req.add_header('User-Agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3')
-    req.add_header('Content-Type', 'application/x-www-form-urlencoded')
-    if referer:
-        req.add_header('Referer', referer)
+def get_html(url, params={}, post={}, noerror=True):
+    headers = {'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3',
+    'Content-Type':'application/x-www-form-urlencoded'}
 
     html = ''
 
     try:
-        conn = urllib2.urlopen(req)
-        if conn.geturl() != req.get_full_url():
-            return conn.geturl()
+        conn = urllib2.urlopen(urllib2.Request('%s?%s' % (url, urllib.urlencode(params)), urllib.urlencode(post), headers))
         html = conn.read()
         conn.close()
     except urllib2.HTTPError, err:
@@ -125,12 +119,11 @@ def get_sibnet_data(url):
             js = p.findall(html)
             s = re.compile(',{src: "(.*?)"')
             if js:
-                temp_url = 'https://video.sibnet.ru' + s.findall(js[0])[0]
-                res['url'] = get_html(temp_url, referer=url)
+                res['url'] = 'https://video.sibnet.ru' + s.findall(js[0])[0] + '|referer=' + url
 
-        s = re.search(r'meta property="og:image" content="(.*?)"/>', html)
-        if s:
-            res['thumb'] = s.group(1)
+        t = re.search(r'meta property="og:image" content="(.*?)"/>', html)
+        if t:
+            res['thumb'] = t.group(1)
 
     return res
 
@@ -154,7 +147,6 @@ def main_menu():
 
 
 def get_release_info(url):
-
     info = {'plot':'', 'enabled':True}
 
     if addon.getSetting('ShowDescriptions') != 'true':
@@ -188,9 +180,9 @@ def sub_menu(params):
     releases = common.parseDOM(html, 'div', attrs={'class':'card-box'})
 
     for release in releases:
-        title = common.parseDOM(release, 'img', ret = 'title')[0].replace('  ', ' ')
-        img = BASE_URL + common.parseDOM(release, 'img', ret = 'src')[0]
-        url = common.parseDOM(release, 'a', ret = 'href')[0]
+        title = common.parseDOM(release, 'img', ret='title')[0].replace('  ', ' ')
+        img = BASE_URL + common.parseDOM(release, 'img', ret='src')[0]
+        url = common.parseDOM(release, 'a', ret='href')[0]
 
         data = get_release_info(url)
 
@@ -220,8 +212,8 @@ def sub_favorite(params):
 
     for release in releases:
         title = common.parseDOM(release, 'h5', attrs={'class':'card-title'})[0]
-        img = BASE_URL + common.parseDOM(release, 'img', ret = 'src')[0]
-        url = common.parseDOM(release, 'a', ret = 'href')[0]
+        img = BASE_URL + common.parseDOM(release, 'img', ret='src')[0]
+        url = common.parseDOM(release, 'a', ret='href')[0]
 
         data = get_release_info(url)
 
@@ -279,8 +271,8 @@ def do_find(params):
 
         title = common.stripTags(title)
 
-        img = BASE_URL + common.parseDOM(release, 'img', ret = 'src')[0]
-        url = common.parseDOM(release, 'a', ret = 'href')[2]
+        img = BASE_URL + common.parseDOM(release, 'img', ret='src')[0]
+        url = common.parseDOM(release, 'a', ret='href')[2]
 
         data = get_release_info(url)
 
@@ -297,7 +289,6 @@ def do_find(params):
 
 
 def sub_release(params):
-
     html = get_html(sections['view_release'] + '/' + params['r'])
 
     covers = common.parseDOM(html, 'a', attrs={'class':'release-slider__item'}, ret='href')
