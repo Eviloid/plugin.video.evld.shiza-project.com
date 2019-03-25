@@ -177,12 +177,12 @@ def sub_menu(params):
 
     html = get_html(sections[params['mode']], {'page':page})
 
-    releases = common.parseDOM(html, 'div', attrs={'class':'card-box'})
+    releases = common.parseDOM(html, 'article', attrs={'class':'grid-card'})
 
     for release in releases:
-        title = common.parseDOM(release, 'img', ret='title')[0].replace('  ', ' ')
+        title = common.parseDOM(release, 'img', ret='alt')[0].replace('  ', ' ')
         img = BASE_URL + common.parseDOM(release, 'img', ret='src')[0]
-        url = common.parseDOM(release, 'a', ret='href')[0]
+        url = common.parseDOM(release, 'a', attrs={'class':'card-box'},ret='href')[0]
 
         data = get_release_info(url)
 
@@ -191,7 +191,7 @@ def sub_menu(params):
         if addon.getSetting('ShowDescriptions') != 'true':
             desc = common.parseDOM(release, 'span', attrs={'class':'relstatus'})
             if len(desc) <> 0:
-                data['plot'] = desc[0].strip()
+                data['plot'] = '[COLOR yellow]%s[/COLOR]' % (desc[0].strip())
 
         release_id = URL_RE.match(url).group(6)
 
