@@ -203,37 +203,6 @@ def sub_menu(params):
     xbmcplugin.endOfDirectory(handle)
 
 
-def sub_favorite(params):
-    page = int(params.get('page', 1))
-
-    html = get_html(sections[params['mode']], {'page':page})
-
-    releases = common.parseDOM(html, 'article', attrs={'class':'grid-list'})
-
-    for release in releases:
-        title = common.parseDOM(release, 'h5', attrs={'class':'card-title'})[0]
-        img = BASE_URL + common.parseDOM(release, 'img', ret='src')[0]
-        url = common.parseDOM(release, 'a', ret='href')[0]
-
-        data = get_release_info(url)
-
-        if not data['enabled']: title = '[COLOR red] %s [/COLOR]' % title
-
-        if addon.getSetting('ShowDescriptions') != 'true':
-            desc = common.parseDOM(release, 'p', attrs={'class':'description'})
-            if len(desc) <> 0:
-                data['plot'] = common.stripTags(common.replaceHTMLCodes(desc[0]).strip())
-
-        release_id = URL_RE.match(url).group(6)
-
-        add_item(title, {'mode':'release', 'r':release_id}, fanart=img, banner=img, poster=img, plot=data['plot'])
-
-    pagination = common.parseDOM(html, 'ul', attrs={'class':'pagination pagination-centered'})
-    if len(pagination) > 0: build_next_page(pagination, page + 1, params)
-    
-    xbmcplugin.endOfDirectory(handle)
-
-
 def input_text():
     result = ''
 
@@ -559,7 +528,7 @@ i = params.get('i', 0)
 
 if mode == '': main_menu()
 elif mode == 'login': do_login()
-elif mode == 'favorite': sub_favorite({'mode':mode,'page':page})
+elif mode == 'favorite': sub_menu({'mode':mode,'page':page})
 elif mode == 'find': do_find({'mode':mode,'page':page,'q':q})
 
 elif mode == 'release': sub_release({'mode':mode,'r':r})
