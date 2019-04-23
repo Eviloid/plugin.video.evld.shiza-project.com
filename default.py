@@ -192,7 +192,9 @@ def get_release_info(url):
 def sub_menu(params):
     page = int(params.get('page', 1))
 
-    html = get_html(sections[params['mode']], {'page':page})
+    params['page'] = page
+
+    html = get_html(sections[params['mode']], params)
 
     releases = common.parseDOM(html, 'article', attrs={'class':'grid-card'})
 
@@ -236,7 +238,6 @@ def input_text():
 
 
 def do_find(params):
-    page = int(params.get('page', 1))
     q = params.get('q', '')
 
     if q == '':
@@ -246,35 +247,7 @@ def do_find(params):
     if q == '':
         return
 
-    html = get_html(sections[params['mode']], {'page':page, 'q':q})
-
-    releases = common.parseDOM(html, 'article', attrs={'class':'grid-list'})
-
-    for release in releases:
-        title = common.parseDOM(release, 'h5', attrs={'class':'card-title'})[0]
-
-        m = common.parseDOM(title, 'strong', attrs={'class':'text-success'})
-
-        if len(m) > 0:
-            title = title.replace(m[0], '[COLOR=yellow]%s[/COLOR]' % m[0])
-
-        title = common.stripTags(title)
-
-        img = BASE_URL + common.parseDOM(release, 'img', ret='src')[0]
-        url = common.parseDOM(release, 'a', ret='href')[2]
-
-        data = get_release_info(url)
-
-        if not data['enabled']: title = '[COLOR red] %s [/COLOR]' % title
-
-        release_id = URL_RE.match(url).group(6)
-
-        add_item(title, {'mode':'release', 'r':release_id}, fanart=img, banner=img, poster=img, plot=data['plot'])
-
-    pagination = common.parseDOM(html, 'ul', attrs={'class':'pagination pagination-centered'})
-    if len(pagination) > 0: build_next_page(pagination, page + 1, params)
-    
-    xbmcplugin.endOfDirectory(handle)
+    sub_menu(params)
 
 
 def sub_release(params):
