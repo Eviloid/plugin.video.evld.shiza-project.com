@@ -128,6 +128,23 @@ def get_sibnet_data(url):
     return res
 
 
+def get_vk_data(url):
+    html = get_html(url).decode('cp1251')
+
+    res = {'url':'Видео не найдено', 'thumb':''}
+
+    t = common.parseDOM(html, 'div', attrs={'class':'video_box_msg_background'}, ret='style')
+    if len(t) > 0:
+        s = re.search(r'url\((.*?)\);', t[0])
+        if s:
+            res['thumb'] = s.group(1)
+    s = re.search(r'url720":"(.*?)","', html)
+    if s:
+        res['url'] = s.group(1).replace(r'\/', '/')
+            
+    return res
+
+
 def main_menu():
     auth = checkauth()
     if not auth:
@@ -280,19 +297,25 @@ def sub_release(params):
             videos = common.parseDOM(html, 'a', attrs={'data-fancybox':'online'}, ret='href')
 
             for i, v in enumerate(videos):
-                # support only sibnet.ru
+                # support sibnet.ru and vk.com
                 if 'sibnet.ru' in v:
-                    title = common.parseDOM(plots[i], 'p')[0]
                     data = get_sibnet_data(v)
-                    url = data['url']
-                    thumb = data['thumb']
+                elif 'vk.com' in v:
+                    v = common.replaceHTMLCodes(v)
+                    data = get_vk_data(v)
+                else:
+                    continue
 
-                    if url[:4] == 'http':
-                        add_item(title, {}, fanart=fanart, banner=img, poster=img, thumb=thumb, url=url, isFolder=False, isPlayable=True)
-                    else:
-                        title = '[COLOR red] %s [/COLOR]' % title
-                        url = '[COLOR red] %s [/COLOR]' % url
-                        add_item(title, {}, fanart=fanart, banner=img, poster=img, url='', plot=url, isFolder=False, isPlayable=False)
+                title = common.parseDOM(plots[i], 'p')[0]
+                url = data['url']
+                thumb = data['thumb']
+
+                if url[:4] == 'http':
+                    add_item(title, {}, fanart=fanart, banner=img, poster=img, thumb=thumb, url=url, isFolder=False, isPlayable=True)
+                else:
+                    title = '[COLOR red] %s [/COLOR]' % title
+                    url = '[COLOR red] %s [/COLOR]' % url
+                    add_item(title, {}, fanart=fanart, banner=img, poster=img, url='', plot=url, isFolder=False, isPlayable=False)
 
     # torrents
     plot = common.parseDOM(html, 'ul', attrs={'class':'torrent-title'})
