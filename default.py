@@ -206,9 +206,12 @@ def sub_menu(params):
         if not data['enabled']: title = '[COLOR red] %s [/COLOR]' % title
 
         if addon.getSetting('ShowDescriptions') != 'true':
-            desc = common.parseDOM(release, 'span', attrs={'class':'relstatus'})
-            if len(desc) <> 0:
-                data['plot'] = '[COLOR yellow]%s[/COLOR]' % (desc[0].strip())
+            status = common.parseDOM(release, 'span', attrs={'class':'relstatus'})
+            if len(status) > 0:
+                data['plot'] = '[COLOR yellow]%s[/COLOR]\n' % (status[0].strip())
+            desc = common.parseDOM(release, 'a', attrs={'class':'card-box'}, ret='title')
+            if len(desc) > 0:
+                data['plot'] = data['plot'] + common.replaceHTMLCodes(desc[0])
 
         release_id = URL_RE.match(url).group(6)
 
