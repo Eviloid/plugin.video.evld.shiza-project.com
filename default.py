@@ -27,7 +27,7 @@ cj = cookielib.MozillaCookieJar(fcookies)
 
 xbmcplugin.setContent(handle, 'movies')
 
-URL_RE = re.compile(r'^((http[s]?|ftp):\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]+[^#?\s]+)(.*)?(#[\w\-]+)?$')
+URL_RE = re.compile(r'^((http[s]?|ftp):\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]?[^#?\s]+)(.*)?(#[\w\-]+)?$')
 
 sections = {
     'all':              BASE_URL,
