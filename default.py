@@ -334,21 +334,23 @@ def sub_series(params):
     series = {}
 
     try:
-        files = torrent['info']['files']
-
-        for i, f in enumerate(files):
-            name = f['path'][-1]
-            series[i] = name
-
-        if addon.getSetting('SortSeries') == 'true':
-            for i in sorted(series, key=series.get):
-                add_item(series[i], {'mode':'play','r':params['r'],'t':params['t'],'i':i}, fanart=fanart, isPlayable=True, isFolder=False)
+        files = torrent['info'].get('files', None)
+        if files == None:
+            add_item(torrent['info']['name'], {'mode':'play','r':params['r'],'t':params['t'],'i':0}, fanart=fanart, isPlayable=True, isFolder=False)
         else:
-            for i in series:
-                add_item(series[i], {'mode':'play','r':params['r'],'t':params['t'],'i':i}, fanart=fanart, isPlayable=True, isFolder=False)
+            for i, f in enumerate(files):
+                name = f['path'][-1]
+                series[i] = name
+
+            if addon.getSetting('SortSeries') == 'true':
+                for i in sorted(series, key=series.get):
+                    add_item(series[i], {'mode':'play','r':params['r'],'t':params['t'],'i':i}, fanart=fanart, isPlayable=True, isFolder=False)
+            else:
+                for i in series:
+                    add_item(series[i], {'mode':'play','r':params['r'],'t':params['t'],'i':i}, fanart=fanart, isPlayable=True, isFolder=False)
             
-        xbmcplugin.endOfDirectory(handle)
         xbmc.executebuiltin('Container.SetViewMode(55)')
+        xbmcplugin.endOfDirectory(handle)
     except:
         pass
 
