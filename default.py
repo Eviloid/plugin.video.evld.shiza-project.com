@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Eviloid, 31.05.2018
 
-import sys, os, cookielib, urllib2, urllib, re, urlparse
+import sys, os, cookielib, urllib2, urllib, re, urlparse, json
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 import CommonFunctions
 
@@ -145,6 +145,29 @@ def get_vk_data(url):
     return res
 
 
+def get_myvi_data(url):
+    res = {'url':'Видео недоступно', 'thumb':''}
+
+    s = re.search(r'embed/html/(.*)', url)
+    if s:
+        url = 'http://myvi.ru/player/api/Video/Get/' + s.group(1) + '?sig'
+        req = urllib2.Request(url)
+        req.add_header('Cookie', 'UniversalUserID=cda9eb54bfb042b3863d2157258dd51e')
+        try:
+            conn = urllib2.urlopen(req)
+            data = conn.read()
+            conn.close()
+
+            data = json.loads(data)
+
+            res['thumb'] = 'http:' + data['sprutoData']['playlist'][0]['posterUrl']
+            u = data['sprutoData']['playlist'][0]['video'][0]['url']
+            res['url'] = u + '|Cookie=' + urllib.urlencode({'UniversalUserID':'cda9eb54bfb042b3863d2157258dd51e'})
+        except:
+            pass
+
+    return res
+
 def main_menu():
     auth = checkauth()
     if not auth:
@@ -279,6 +302,8 @@ def sub_release(params):
                 elif 'vk.com' in v:
                     v = common.replaceHTMLCodes(v)
                     data = get_vk_data(v)
+                elif 'myvi.ru' in v:
+                    data = get_myvi_data(v)
                 else:
                     continue
 
