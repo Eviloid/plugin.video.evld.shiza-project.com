@@ -312,7 +312,7 @@ def sub_release(params):
                 thumb = data['thumb']
 
                 if url[:4] == 'http':
-                    add_item(title, {}, fanart=fanart, banner=img, poster=img, thumb=thumb, url=url, isFolder=False, isPlayable=True)
+                    add_item(title, {}, fanart=fanart, banner=img, thumb=thumb, url=url, isFolder=False, isPlayable=True)
                 else:
                     title = '[COLOR red] %s [/COLOR]' % title
                     url = '[COLOR red] %s [/COLOR]' % url
