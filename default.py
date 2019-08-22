@@ -287,7 +287,7 @@ def sub_release(params):
                 thumb = data['thumb']
 
                 if url[:4] == 'http':
-                    add_item(title, {}, fanart=fanart, banner=img, thumb=thumb, url=url, isFolder=False, isPlayable=True)
+                    add_item(title, {'mode':'play','r':url}, fanart=fanart, banner=img, thumb=thumb, isFolder=False, isPlayable=True)
                 else:
                     title = '[COLOR red] %s [/COLOR]' % title
                     url = '[COLOR red] %s [/COLOR]' % url
@@ -368,6 +368,12 @@ def sub_play_tam(url, ind):
 
 
 def sub_play(params):
+    if params['r'][:4] == 'http':
+        purl = urllib.unquote_plus(params['r'])
+        item = xbmcgui.ListItem(path=purl)
+        xbmcplugin.setResolvedUrl(handle, True, item)
+        return
+
     file_id = int(params.get('i', 0))
     uri = sections['get_torrent'] + '/' + params['r'] + '/' + params['t']
     
@@ -509,6 +515,24 @@ def add_item(title, params={}, banner='', fanart='', poster='', thumb='', plot='
     xbmcplugin.addDirectoryItem(handle, url=url, listitem=item, isFolder=isFolder)
 
 
+def get_params():
+    param = {}
+    paramstring = sys.argv[2]
+    if len(paramstring) >= 2:
+        params = sys.argv[2]
+        cleanedparams = params.replace('?', '')
+        if (params[len(params) - 1] == '/'):
+            params = params[0:len(params) - 2]
+        pairsofparams = cleanedparams.split('&')
+        param = {}
+        for i in range(len(pairsofparams)):
+            splitparams = {}
+            splitparams = pairsofparams[i].split('=')
+            if (len(splitparams)) == 2:
+                param[splitparams[0]] = splitparams[1]
+    return param
+
+
 try:
     cj.load(fcookies, True, True)
 except:
@@ -518,7 +542,9 @@ hr = urllib2.HTTPCookieProcessor(cj)
 opener = urllib2.build_opener(hr)
 urllib2.install_opener(opener)
 
-params = common.getParameters(sys.argv[2])
+#params = common.getParameters(sys.argv[2])
+# issue: https://github.com/HenrikDK/xbmc-common-plugin-functions/issues/6
+params = get_params()
 
 mode = params.get('mode', '')
 page = params.get('page', 1)
