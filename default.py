@@ -561,5 +561,10 @@ elif mode == 'find': do_find({'mode':mode,'page':page,'q':q})
 elif mode == 'release': sub_release({'mode':mode,'r':r})
 elif mode == 'series': sub_series({'mode':mode,'r':r, 't':t})
 elif mode == 'play': sub_play({'mode':mode,'r':r,'t':t,'i':i})
+elif mode == 'cleancache':
+    from tccleaner import TextureCacheCleaner as tcc
+    tcc().remove_like('%shiza-project.com/upload/covers/%', True)
+    tcc().remove_like('%video.sibnet.ru/upload/cover/%', True)
+
 else:
     sub_menu({'mode':mode, 'page':page})
