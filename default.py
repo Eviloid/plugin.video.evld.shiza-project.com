@@ -425,6 +425,12 @@ def sub_play(params):
         progressBar.update(0, 'Torrent2Http', 'Загрузка торрента', "")
         while not xbmc.abortRequested and not ready:
             xbmc.sleep(500)
+
+            if progressBar.iscanceled():
+                progressBar.update(0)
+                progressBar.close()
+                break
+
             status = engine.status()
             # Check if there is loading torrent error and raise exception 
             engine.check_torrent_error(status)
@@ -467,10 +473,6 @@ def sub_play(params):
                 ready = True
                 break
             
-            if progressBar.iscanceled():
-                progressBar.update(0)
-                progressBar.close()
-                break
             # Here you can update pre-buffer progress dialog, for example.
             # Note that State.CHECKING also need waiting until fully finished, so it better to use resume_file option
             # for engine to avoid CHECKING state if possible.
