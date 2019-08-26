@@ -25,7 +25,7 @@ fanart = xt(os.path.join(Pdir, 'fanart.jpg'))
 fcookies = xt(os.path.join(Pdir, 'cookies.txt'))
 cj = cookielib.MozillaCookieJar(fcookies)
 
-xbmcplugin.setContent(handle, 'movies')
+xbmcplugin.setContent(handle, 'tvshows')
 
 URL_RE = re.compile(r'^((http[s]?|ftp):\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]?[^#?\s]+)(.*)?(#[\w\-]+)?$')
 
@@ -321,8 +321,8 @@ def sub_release(params):
 
         add_item(title, {'mode':'series','r':params['r'], 't':torrent_id}, fanart=fanart, banner=img, poster=img, plot=info)
 
+    xbmcplugin.setContent(handle, 'episodes')
     xbmcplugin.endOfDirectory(handle)
-    xbmc.executebuiltin('Container.SetViewMode(55)')
 
 
 def sub_series(params):
@@ -349,7 +349,7 @@ def sub_series(params):
                 for i in series:
                     add_item(series[i], {'mode':'play','r':params['r'],'t':params['t'],'i':i}, fanart=fanart, isPlayable=True, isFolder=False)
             
-        xbmc.executebuiltin('Container.SetViewMode(55)')
+        xbmcplugin.setContent(handle, 'files')
         xbmcplugin.endOfDirectory(handle)
     except:
         pass
