@@ -379,16 +379,13 @@ def sub_play(params):
     
     torrent = get_html(uri)
 
-    temp_name = os.path.join(xt('special://temp/'), 'shiza.torrent')
-
-    if sys.platform.startswith('win'):
-        temp_name = temp_name.replace('\\', '//')
+    temp_name = os.path.join(xt('special://masterprofile'), 'shiza.torrent')
 
     temp_file = open(temp_name, "wb")
     temp_file.write(torrent)
     temp_file.close()
 
-    uri = "file://" + temp_name
+    uri = 'file://' + temp_name.replace('\\', '//')
 
     if addon.getSetting('Engine') == '1':
         sub_play_yatp(uri, file_id)
@@ -403,7 +400,7 @@ def sub_play(params):
     from torrent2http import State, Engine, MediaType
     progressBar = xbmcgui.DialogProgress()
     from contextlib import closing
-    DDir=os.path.join(xt('special://home/'), 'userdata')
+    DDir=xt('special://masterprofile')
 
     progressBar.create('Torrent2Http', 'Запуск')
     # XBMC addon handle
@@ -484,7 +481,6 @@ def sub_play(params):
             item = xbmcgui.ListItem(path=file_status.url)
             xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
             xbmc.sleep(3000)
-            xbmc.sleep(3000)
             # Wait until playing finished or abort requested
             while not xbmc.abortRequested and xbmc.Player().isPlaying():
                 xbmc.sleep(500)
@@ -526,7 +522,6 @@ def get_params():
         if (params[len(params) - 1] == '/'):
             params = params[0:len(params) - 2]
         pairsofparams = cleanedparams.split('&')
-        param = {}
         for i in range(len(pairsofparams)):
             splitparams = {}
             splitparams = pairsofparams[i].split('=')
