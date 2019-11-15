@@ -25,7 +25,7 @@ fanart = xt(os.path.join(Pdir, 'fanart.jpg'))
 fcookies = xt(os.path.join(Pdir, 'cookies.txt'))
 cj = cookielib.MozillaCookieJar(fcookies)
 
-xbmcplugin.setContent(handle, 'movies')
+xbmcplugin.setContent(handle, 'tvshows')
 
 URL_RE = re.compile(r'^((http[s]?|ftp):\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]?[^#?\s]+)(.*)?(#[\w\-]+)?$')
 
@@ -151,8 +151,14 @@ def get_myvi_data(url):
     s = re.search(r'embed/html/(.*)', url)
     if s:
         url = 'http://myvi.ru/player/api/Video/Get/' + s.group(1) + '?sig'
+
         req = urllib2.Request(url)
-        req.add_header('Cookie', 'UniversalUserID=cda9eb54bfb042b3863d2157258dd51e')
+        #req.add_header('Cookie', 'UniversalUserID=cda9eb54bfb042b3863d2157258dd51e')
+
+        # pass cloudflare
+        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36')
+        req.add_header('Cookie', 'UniversalUserID=cda9eb54bfb042b3863d2157258dd51e;__cfduid=d41e929703f6806254a1b79365d77577e1569772156; cf_clearance=78288cb1f42449d012723c67b08cc75541ad02ab-1569772160-1800-150')
+
         try:
             conn = urllib2.urlopen(req)
             data = conn.read()
@@ -162,11 +168,12 @@ def get_myvi_data(url):
 
             res['thumb'] = 'http:' + data['sprutoData']['playlist'][0]['posterUrl']
             u = data['sprutoData']['playlist'][0]['video'][0]['url']
-            res['url'] = u + '|Cookie=' + urllib.urlencode({'UniversalUserID':'cda9eb54bfb042b3863d2157258dd51e'})
+            res['url'] = u + '|Cookie=UniversalUserID=cda9eb54bfb042b3863d2157258dd51e'
         except:
             pass
 
     return res
+
 
 def main_menu():
     auth = checkauth()
@@ -304,6 +311,7 @@ def sub_release(params):
                     data = get_vk_data(v)
                 elif 'myvi.ru' in v:
                     data = get_myvi_data(v)
+                    data['url'] = v.replace('http', 'myvi')
                 else:
                     continue
 
@@ -311,8 +319,8 @@ def sub_release(params):
                 url = data['url']
                 thumb = data['thumb']
 
-                if url[:4] == 'http':
-                    add_item(title, {}, fanart=fanart, banner=img, thumb=thumb, url=url, isFolder=False, isPlayable=True)
+                if url[:4] == 'http' or url[:4] =='myvi':
+                    add_item(title, {'mode':'play','r':url}, fanart=fanart, banner=img, thumb=thumb, isFolder=False, isPlayable=True)
                 else:
                     title = '[COLOR red] %s [/COLOR]' % title
                     url = '[COLOR red] %s [/COLOR]' % url
@@ -346,8 +354,8 @@ def sub_release(params):
 
         add_item(title, {'mode':'series','r':params['r'], 't':torrent_id}, fanart=fanart, banner=img, poster=img, plot=info)
 
+    xbmcplugin.setContent(handle, 'episodes')
     xbmcplugin.endOfDirectory(handle)
-    xbmc.executebuiltin('Container.SetViewMode(55)')
 
 
 def sub_series(params):
@@ -374,7 +382,7 @@ def sub_series(params):
                 for i in series:
                     add_item(series[i], {'mode':'play','r':params['r'],'t':params['t'],'i':i}, fanart=fanart, isPlayable=True, isFolder=False)
             
-        xbmc.executebuiltin('Container.SetViewMode(55)')
+        xbmcplugin.setContent(handle, 'files')
         xbmcplugin.endOfDirectory(handle)
     except:
         pass
@@ -393,21 +401,32 @@ def sub_play_tam(url, ind):
 
 
 def sub_play(params):
+    if params['r'][:4] == 'http':
+        purl = urllib.unquote_plus(params['r'])
+        item = xbmcgui.ListItem(path=purl)
+        xbmcplugin.setResolvedUrl(handle, True, item)
+        return
+
+    if params['r'][:4] == 'myvi':
+        url = urllib.unquote_plus(params['r']).replace('myvi', 'http')
+        data = get_myvi_data(url)
+
+        item = xbmcgui.ListItem(path=data['url'])
+        xbmcplugin.setResolvedUrl(handle, True, item)
+        return
+
     file_id = int(params.get('i', 0))
     uri = sections['get_torrent'] + '/' + params['r'] + '/' + params['t']
     
     torrent = get_html(uri)
 
-    temp_name = os.path.join(xt('special://temp/'), 'shiza.torrent')
-
-    if sys.platform.startswith('win'):
-        temp_name = temp_name.replace('\\', '//')
+    temp_name = os.path.join(xt('special://masterprofile'), 'shiza.torrent')
 
     temp_file = open(temp_name, "wb")
     temp_file.write(torrent)
     temp_file.close()
 
-    uri = "file://" + temp_name
+    uri = 'file://' + temp_name.replace('\\', '//')
 
     if addon.getSetting('Engine') == '1':
         sub_play_yatp(uri, file_id)
@@ -422,7 +441,7 @@ def sub_play(params):
     from torrent2http import State, Engine, MediaType
     progressBar = xbmcgui.DialogProgress()
     from contextlib import closing
-    DDir=os.path.join(xt('special://home/'), 'userdata')
+    DDir=xt('special://masterprofile')
 
     progressBar.create('Torrent2Http', 'Запуск')
     # XBMC addon handle
@@ -444,6 +463,12 @@ def sub_play(params):
         progressBar.update(0, 'Torrent2Http', 'Загрузка торрента', "")
         while not xbmc.abortRequested and not ready:
             xbmc.sleep(500)
+
+            if progressBar.iscanceled():
+                progressBar.update(0)
+                progressBar.close()
+                break
+
             status = engine.status()
             # Check if there is loading torrent error and raise exception 
             engine.check_torrent_error(status)
@@ -486,10 +511,6 @@ def sub_play(params):
                 ready = True
                 break
             
-            if progressBar.iscanceled():
-                progressBar.update(0)
-                progressBar.close()
-                break
             # Here you can update pre-buffer progress dialog, for example.
             # Note that State.CHECKING also need waiting until fully finished, so it better to use resume_file option
             # for engine to avoid CHECKING state if possible.
@@ -500,7 +521,6 @@ def sub_play(params):
             # Resolve URL to XBMC
             item = xbmcgui.ListItem(path=file_status.url)
             xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
-            xbmc.sleep(3000)
             xbmc.sleep(3000)
             # Wait until playing finished or abort requested
             while not xbmc.abortRequested and xbmc.Player().isPlaying():
@@ -534,6 +554,23 @@ def add_item(title, params={}, banner='', fanart='', poster='', thumb='', plot='
     xbmcplugin.addDirectoryItem(handle, url=url, listitem=item, isFolder=isFolder)
 
 
+def get_params():
+    param = {}
+    paramstring = sys.argv[2]
+    if len(paramstring) >= 2:
+        params = sys.argv[2]
+        cleanedparams = params.replace('?', '')
+        if (params[len(params) - 1] == '/'):
+            params = params[0:len(params) - 2]
+        pairsofparams = cleanedparams.split('&')
+        for i in range(len(pairsofparams)):
+            splitparams = {}
+            splitparams = pairsofparams[i].split('=')
+            if (len(splitparams)) == 2:
+                param[splitparams[0]] = splitparams[1]
+    return param
+
+
 try:
     cj.load(fcookies, True, True)
 except:
@@ -543,7 +580,9 @@ hr = urllib2.HTTPCookieProcessor(cj)
 opener = urllib2.build_opener(hr)
 urllib2.install_opener(opener)
 
-params = common.getParameters(sys.argv[2])
+#params = common.getParameters(sys.argv[2])
+# issue: https://github.com/HenrikDK/xbmc-common-plugin-functions/issues/6
+params = get_params()
 
 mode = params.get('mode', '')
 page = params.get('page', 1)
@@ -560,5 +599,10 @@ elif mode == 'find': do_find({'mode':mode,'page':page,'q':q})
 elif mode == 'release': sub_release({'mode':mode,'r':r})
 elif mode == 'series': sub_series({'mode':mode,'r':r, 't':t})
 elif mode == 'play': sub_play({'mode':mode,'r':r,'t':t,'i':i})
+elif mode == 'cleancache':
+    from tccleaner import TextureCacheCleaner as tcc
+    tcc().remove_like('%shiza-project.com/upload/covers/%', True)
+    tcc().remove_like('%video.sibnet.ru/upload/cover/%', True)
+
 else:
     sub_menu({'mode':mode, 'page':page})
