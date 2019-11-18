@@ -311,7 +311,8 @@ def sub_release(params):
                     data = get_vk_data(v)
                 elif 'myvi.ru' in v:
                     data = get_myvi_data(v)
-                    data['url'] = v.replace('http', 'myvi')
+                    if data['url'][:4] == 'http':
+                        data['url'] = v.replace('http', 'myvi')
                 else:
                     continue
 
