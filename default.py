@@ -9,6 +9,8 @@ import CommonFunctions
 PLUGIN_NAME   = 'SHIZA Project'
 BASE_URL = 'http://shiza-project.com'
 
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36'
+
 common = CommonFunctions
 common.plugin = PLUGIN_NAME
 
@@ -74,6 +76,7 @@ def do_login():
         get_html(sections['do_login'], post=post)
 
         cj.save(fcookies, True, True)
+        xbmc.executebuiltin('Container.Refresh')
 
 
 def checkauth():
@@ -82,8 +85,10 @@ def checkauth():
 
 
 def get_html(url, params={}, post={}, noerror=True):
-    headers = {'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3',
-    'Content-Type':'application/x-www-form-urlencoded'}
+    headers = {'User-Agent':USER_AGENT}
+
+    if post:
+        headers['Content-Type'] = 'application/x-www-form-urlencoded'
 
     html = ''
 
@@ -114,12 +119,9 @@ def get_sibnet_data(url):
     if s:
         res['url'] = s.group(1).decode('cp1251')
     else:
-        p = re.compile('player.src(.*?);')
-        if p:
-            js = p.findall(html)
-            s = re.compile(',{src: "(.*?)"')
-            if js:
-                res['url'] = 'https://video.sibnet.ru' + s.findall(js[0])[0] + '|referer=' + url
+        s = re.search('player.src\(\[{src: "(.*?)"', html)
+        if s:
+            res['url'] = 'https://video.sibnet.ru' + s.group(1) + '|referer=' + url
 
         t = re.search(r'meta property="og:image" content="(.*?)"/>', html)
         if t:
@@ -153,11 +155,8 @@ def get_myvi_data(url):
         url = 'http://myvi.ru/player/api/Video/Get/' + s.group(1) + '?sig'
 
         req = urllib2.Request(url)
-        #req.add_header('Cookie', 'UniversalUserID=cda9eb54bfb042b3863d2157258dd51e')
-
-        # pass cloudflare
-        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36')
-        req.add_header('Cookie', 'UniversalUserID=cda9eb54bfb042b3863d2157258dd51e;__cfduid=d41e929703f6806254a1b79365d77577e1569772156; cf_clearance=78288cb1f42449d012723c67b08cc75541ad02ab-1569772160-1800-150')
+        req.add_header('User-Agent', USER_AGENT)
+        req.add_header('Cookie', 'UniversalUserID=cda9eb54bfb042b3863d2157258dd51e')
 
         try:
             conn = urllib2.urlopen(req)
@@ -303,7 +302,7 @@ def sub_release(params):
             videos = common.parseDOM(html, 'a', attrs={'data-fancybox':'online'}, ret='href')
 
             for i, v in enumerate(videos):
-                # support sibnet.ru and vk.com
+                # support sibnet.ru, vk.com and myvi.ru
                 if 'sibnet.ru' in v:
                     data = get_sibnet_data(v)
                 elif 'vk.com' in v:
@@ -456,7 +455,7 @@ def sub_play(params):
     # Set pre-buffer size to 15Mb. This is a size of file that need to be downloaded before we resolve URL to XMBC 
     pre_buffer_bytes = 15 * 1024 * 1024
     
-    engine = Engine(uri, download_path=DDir, enable_dht=True, dht_routers=["router.bittorrent.com:6881","router.utorrent.com:6881"], user_agent = 'uTorrent/2200(24683)')
+    engine = Engine(uri, download_path=DDir)
     with closing(engine):
         # Start engine and instruct torrent2http to begin download first file, 
         # so it can start searching and connecting to peers  
@@ -466,8 +465,7 @@ def sub_play(params):
             xbmc.sleep(500)
 
             if progressBar.iscanceled():
-                progressBar.update(0)
-                progressBar.close()
+                ready = False
                 break
 
             status = engine.status()
