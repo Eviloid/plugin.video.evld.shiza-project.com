@@ -119,7 +119,7 @@ def get_sibnet_data(url):
     if s:
         res['url'] = s.group(1).decode('cp1251')
     else:
-        s = re.search('player.src\(\[{src: "(.*?)"', html)
+        s = re.search(r'player.src\(\[{src: "(.*?)"', html)
         if s:
             res['url'] = 'https://video.sibnet.ru' + s.group(1) + '|referer=' + url
 
@@ -135,14 +135,23 @@ def get_vk_data(url):
 
     res = {'url':'Видео не найдено', 'thumb':''}
 
-    t = common.parseDOM(html, 'div', attrs={'class':'video_box_msg_background'}, ret='style')
-    if len(t) > 0:
-        s = re.search(r'url\((.*?)\);', t[0])
-        if s:
-            res['thumb'] = s.group(1)
-    s = re.search(r'url720":"(.*?)","', html)
+    href = common.parseDOM(html, 'a', attrs={'class':'flat_button button_big'}, ret='href')
+    if href:
+        html = get_html('https:%s' % href[0])
+
+        t = re.search(r'"info":\[.*?,"(.*?)"', html)
+        if t:
+            res['thumb'] = t.group(1).replace(r'\/', '/')
+    else:
+        t = common.parseDOM(html, 'div', attrs={'class':'video_box_msg_background'}, ret='style')
+        if t:
+            s = re.search(r'url\((.*?)\);', t[0])
+            if s:
+                res['thumb'] = s.group(1)
+
+    s = re.findall(r'"url(\d+)":"(.+?)"', html)
     if s:
-        res['url'] = s.group(1).replace(r'\/', '/')
+        res['url'] = s[-1][1].replace(r'\/', '/')
             
     return res
 
@@ -448,7 +457,7 @@ def sub_play(params):
     # handle = ...
     # Playable list item
     # listitem = ...
-    # We can     know file_id of needed video file on this step, if no, we'll try to detect one.
+    # We can know file_id of needed video file on this step, if no, we'll try to detect one.
     # file_id = None
     # Flag will set to True when engine is ready to resolve URL to XBMC
     ready = False
@@ -519,7 +528,7 @@ def sub_play(params):
         if ready:
             # Resolve URL to XBMC
             item = xbmcgui.ListItem(path=file_status.url)
-            xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
+            xbmcplugin.setResolvedUrl(handle, True, item)
             xbmc.sleep(3000)
             # Wait until playing finished or abort requested
             while not xbmc.abortRequested and xbmc.Player().isPlaying():
