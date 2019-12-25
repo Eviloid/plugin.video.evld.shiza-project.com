@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 # Eviloid, 31.05.2018
 
-import sys, os, cookielib, urllib2, urllib, re, urlparse
+import sys, os, cookielib, urllib2, urllib, re, urlparse, json
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 import CommonFunctions
 
 PLUGIN_NAME   = 'SHIZA Project'
 BASE_URL = 'http://shiza-project.com'
+
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36'
 
 common = CommonFunctions
 common.plugin = PLUGIN_NAME
@@ -74,6 +76,7 @@ def do_login():
         get_html(sections['do_login'], post=post)
 
         cj.save(fcookies, True, True)
+        xbmc.executebuiltin('Container.Refresh')
 
 
 def checkauth():
@@ -82,8 +85,10 @@ def checkauth():
 
 
 def get_html(url, params={}, post={}, noerror=True):
-    headers = {'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3',
-    'Content-Type':'application/x-www-form-urlencoded'}
+    headers = {'User-Agent':USER_AGENT}
+
+    if post:
+        headers['Content-Type'] = 'application/x-www-form-urlencoded'
 
     html = ''
 
@@ -114,12 +119,9 @@ def get_sibnet_data(url):
     if s:
         res['url'] = s.group(1).decode('cp1251')
     else:
-        p = re.compile('player.src(.*?);')
-        if p:
-            js = p.findall(html)
-            s = re.compile(',{src: "(.*?)"')
-            if js:
-                res['url'] = 'https://video.sibnet.ru' + s.findall(js[0])[0] + '|referer=' + url
+        s = re.search(r'player.src\(\[{src: "(.*?)"', html)
+        if s:
+            res['url'] = 'https://video.sibnet.ru' + s.group(1) + '|referer=' + url
 
         t = re.search(r'meta property="og:image" content="(.*?)"/>', html)
         if t:
@@ -133,15 +135,51 @@ def get_vk_data(url):
 
     res = {'url':'Видео не найдено', 'thumb':''}
 
-    t = common.parseDOM(html, 'div', attrs={'class':'video_box_msg_background'}, ret='style')
-    if len(t) > 0:
-        s = re.search(r'url\((.*?)\);', t[0])
-        if s:
-            res['thumb'] = s.group(1)
-    s = re.search(r'url720":"(.*?)","', html)
+    href = common.parseDOM(html, 'a', attrs={'class':'flat_button button_big'}, ret='href')
+    if href:
+        html = get_html('https:%s' % href[0])
+
+        t = re.search(r'"info":\[.*?,"(.*?)"', html)
+        if t:
+            res['thumb'] = t.group(1).replace(r'\/', '/')
+    else:
+        t = common.parseDOM(html, 'div', attrs={'class':'video_box_msg_background'}, ret='style')
+        if t:
+            s = re.search(r'url\((.*?)\);', t[0])
+            if s:
+                res['thumb'] = s.group(1)
+
+    s = re.findall(r'"url(\d+)":"(.+?)"', html)
     if s:
-        res['url'] = s.group(1).replace(r'\/', '/')
+        res['url'] = s[-1][1].replace(r'\/', '/')
             
+    return res
+
+
+def get_myvi_data(url):
+    res = {'url':'Видео недоступно', 'thumb':''}
+
+    s = re.search(r'embed/html/(.*)', url)
+    if s:
+        url = 'http://myvi.ru/player/api/Video/Get/' + s.group(1) + '?sig'
+
+        req = urllib2.Request(url)
+        req.add_header('User-Agent', USER_AGENT)
+        req.add_header('Cookie', 'UniversalUserID=cda9eb54bfb042b3863d2157258dd51e')
+
+        try:
+            conn = urllib2.urlopen(req)
+            data = conn.read()
+            conn.close()
+
+            data = json.loads(data)
+
+            res['thumb'] = 'http:' + data['sprutoData']['playlist'][0]['posterUrl']
+            u = data['sprutoData']['playlist'][0]['video'][0]['url']
+            res['url'] = u + '|Cookie=UniversalUserID=cda9eb54bfb042b3863d2157258dd51e'
+        except:
+            pass
+
     return res
 
 
@@ -273,12 +311,16 @@ def sub_release(params):
             videos = common.parseDOM(html, 'a', attrs={'data-fancybox':'online'}, ret='href')
 
             for i, v in enumerate(videos):
-                # support sibnet.ru and vk.com
+                # support sibnet.ru, vk.com and myvi.ru
                 if 'sibnet.ru' in v:
                     data = get_sibnet_data(v)
                 elif 'vk.com' in v:
                     v = common.replaceHTMLCodes(v)
                     data = get_vk_data(v)
+                elif 'myvi.ru' in v:
+                    data = get_myvi_data(v)
+                    if data['url'][:4] == 'http':
+                        data['url'] = v.replace('http', 'myvi')
                 else:
                     continue
 
@@ -286,7 +328,7 @@ def sub_release(params):
                 url = data['url']
                 thumb = data['thumb']
 
-                if url[:4] == 'http':
+                if url[:4] == 'http' or url[:4] =='myvi':
                     add_item(title, {'mode':'play','r':url}, fanart=fanart, banner=img, thumb=thumb, isFolder=False, isPlayable=True)
                 else:
                     title = '[COLOR red] %s [/COLOR]' % title
@@ -336,11 +378,11 @@ def sub_series(params):
     try:
         files = torrent['info'].get('files', None)
         if files == None:
-            add_item(torrent['info']['name'], {'mode':'play','r':params['r'],'t':params['t'],'i':0}, fanart=fanart, isPlayable=True, isFolder=False)
+            name = '%s (%s MB)' % (torrent['info']['name'], torrent['info']['length'] / 1024 / 1024)
+            add_item(name, {'mode':'play','r':params['r'],'t':params['t'],'i':0}, fanart=fanart, isPlayable=True, isFolder=False)
         else:
             for i, f in enumerate(files):
-                name = f['path'][-1]
-                series[i] = name
+                series[i] = '%s (%s MB)' % (f['path'][-1], f['length'] / 1024 / 1024)
 
             if addon.getSetting('SortSeries') == 'true':
                 for i in sorted(series, key=series.get):
@@ -362,15 +404,23 @@ def sub_play_yatp(url, ind):
 
 
 def sub_play_tam(url, ind):
-	purl ='plugin://plugin.video.tam/?mode=play&url='+ urllib.quote_plus(url) + '&ind=' + str(ind)
-	item = xbmcgui.ListItem(path=purl)
-	xbmcplugin.setResolvedUrl(handle, True, item)
+    purl ='plugin://plugin.video.tam/?mode=play&url='+ urllib.quote_plus(url) + '&ind=' + str(ind)
+    item = xbmcgui.ListItem(path=purl)
+    xbmcplugin.setResolvedUrl(handle, True, item)
 
 
 def sub_play(params):
     if params['r'][:4] == 'http':
         purl = urllib.unquote_plus(params['r'])
         item = xbmcgui.ListItem(path=purl)
+        xbmcplugin.setResolvedUrl(handle, True, item)
+        return
+
+    if params['r'][:4] == 'myvi':
+        url = urllib.unquote_plus(params['r']).replace('myvi', 'http')
+        data = get_myvi_data(url)
+
+        item = xbmcgui.ListItem(path=data['url'])
         xbmcplugin.setResolvedUrl(handle, True, item)
         return
 
@@ -407,14 +457,14 @@ def sub_play(params):
     # handle = ...
     # Playable list item
     # listitem = ...
-    # We can     know file_id of needed video file on this step, if no, we'll try to detect one.
+    # We can know file_id of needed video file on this step, if no, we'll try to detect one.
     # file_id = None
     # Flag will set to True when engine is ready to resolve URL to XBMC
     ready = False
     # Set pre-buffer size to 15Mb. This is a size of file that need to be downloaded before we resolve URL to XMBC 
     pre_buffer_bytes = 15 * 1024 * 1024
     
-    engine = Engine(uri, download_path=DDir, enable_dht=True, dht_routers=["router.bittorrent.com:6881","router.utorrent.com:6881"], user_agent = 'uTorrent/2200(24683)')
+    engine = Engine(uri, download_path=DDir)
     with closing(engine):
         # Start engine and instruct torrent2http to begin download first file, 
         # so it can start searching and connecting to peers  
@@ -424,8 +474,7 @@ def sub_play(params):
             xbmc.sleep(500)
 
             if progressBar.iscanceled():
-                progressBar.update(0)
-                progressBar.close()
+                ready = False
                 break
 
             status = engine.status()
@@ -479,7 +528,7 @@ def sub_play(params):
         if ready:
             # Resolve URL to XBMC
             item = xbmcgui.ListItem(path=file_status.url)
-            xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
+            xbmcplugin.setResolvedUrl(handle, True, item)
             xbmc.sleep(3000)
             # Wait until playing finished or abort requested
             while not xbmc.abortRequested and xbmc.Player().isPlaying():
