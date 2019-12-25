@@ -378,11 +378,11 @@ def sub_series(params):
     try:
         files = torrent['info'].get('files', None)
         if files == None:
-            add_item(torrent['info']['name'], {'mode':'play','r':params['r'],'t':params['t'],'i':0}, fanart=fanart, isPlayable=True, isFolder=False)
+            name = '%s (%s MB)' % (torrent['info']['name'], torrent['info']['length'] / 1024 / 1024)
+            add_item(name, {'mode':'play','r':params['r'],'t':params['t'],'i':0}, fanart=fanart, isPlayable=True, isFolder=False)
         else:
             for i, f in enumerate(files):
-                name = f['path'][-1]
-                series[i] = name
+                series[i] = '%s (%s MB)' % (f['path'][-1], f['length'] / 1024 / 1024)
 
             if addon.getSetting('SortSeries') == 'true':
                 for i in sorted(series, key=series.get):
@@ -404,9 +404,9 @@ def sub_play_yatp(url, ind):
 
 
 def sub_play_tam(url, ind):
-	purl ='plugin://plugin.video.tam/?mode=play&url='+ urllib.quote_plus(url) + '&ind=' + str(ind)
-	item = xbmcgui.ListItem(path=purl)
-	xbmcplugin.setResolvedUrl(handle, True, item)
+    purl ='plugin://plugin.video.tam/?mode=play&url='+ urllib.quote_plus(url) + '&ind=' + str(ind)
+    item = xbmcgui.ListItem(path=purl)
+    xbmcplugin.setResolvedUrl(handle, True, item)
 
 
 def sub_play(params):
