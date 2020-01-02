@@ -24,7 +24,9 @@ addon = xbmcaddon.Addon(id='plugin.video.evld.shiza-project.com')
 Pdir = addon.getAddonInfo('path')
 icon = xt(os.path.join(Pdir, 'icon.png'))
 fanart = xt(os.path.join(Pdir, 'fanart.jpg'))
+
 fcookies = xt(os.path.join(Pdir, 'cookies.txt'))
+fcookies = fcookies.decode('utf-8') if sys.platform == 'win32' else fcookies # fix Cyrillic symbols in path
 cj = cookielib.MozillaCookieJar(fcookies)
 
 xbmcplugin.setContent(handle, 'tvshows')
@@ -437,7 +439,7 @@ def sub_play(params):
 
     temp_name = os.path.join(xt('special://masterprofile'), 'shiza.torrent')
 
-    temp_file = open(temp_name, "wb")
+    temp_file = open(temp_name.decode('utf-8') if sys.platform == 'win32' else temp_name, "wb")
     temp_file.write(torrent)
     temp_file.close()
 
