@@ -409,6 +409,12 @@ def sub_play_tam(url, ind):
     xbmcplugin.setResolvedUrl(handle, True, item)
 
 
+def sub_play_elem(url, ind):
+    purl ='plugin://plugin.video.elementum/play?uri='+ urllib.quote_plus(url) + '&index=' + str(ind)
+    item = xbmcgui.ListItem(path=purl)
+    xbmcplugin.setResolvedUrl(handle, True, item)
+
+
 def sub_play(params):
     if params['r'][:4] == 'http':
         purl = urllib.unquote_plus(params['r'])
@@ -443,6 +449,10 @@ def sub_play(params):
 
     if addon.getSetting('Engine') == '2':
         sub_play_tam(uri, file_id)
+        return
+
+    if addon.getSetting('Engine') == '3':
+        sub_play_elem(temp_name, file_id)
         return
 
     #, cwd=os.path.dirname(binary_path)) in torrent2html engine.py
