@@ -1,5 +1,5 @@
 import re
-decimal_match = re.compile('\d')
+decimal_match = re.compile(r'\d')
 
 def bdecode(data):
     '''Main function to decode bencoded data'''
@@ -44,4 +44,4 @@ def _dechunk(chunks):
         for i in range(int(num)):
             line += chunks.pop()
         return line
-    raise "Invalid input!"
+    raise 'Invalid input!'

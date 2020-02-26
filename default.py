@@ -338,30 +338,39 @@ def sub_release(params):
                     add_item(title, {}, fanart=fanart, banner=img, poster=img, url='', plot=url, isFolder=False, isPlayable=False)
 
     # torrents
-    plot = common.parseDOM(html, 'ul', attrs={'class':'torrent-title'})
-    torrents = common.parseDOM(html, 'a', attrs={'class':'btn btn-torrent grad-success'}, ret='href')
+    titles = common.parseDOM(html, 'a', attrs={'data-toggle':'tab'})
+    tabs = common.parseDOM(html, 'a', attrs={'data-toggle':'tab'}, ret='href')
 
-    for i, t in enumerate(torrents):
-        url = t
+    container = common.parseDOM(html, 'div', attrs={'class':'tab-content'})
+
+    for i, t in enumerate(tabs):
+
+        info = common.stripTags(titles[i]).replace('\t', '').encode('utf-8').strip()
+
+        torrent = common.parseDOM(container, 'div', attrs={'id':t[1:]})
+        url =  common.parseDOM(torrent, 'a', attrs={'class':'button--success button--big button--fluid'}, ret='href')[0]
+
         torrent_id = URL_RE.match(url).group(6)
+        content = (common.parseDOM(container, 'div', attrs={'id': torrent_id})[0]).encode('utf-8')
 
-        content = (common.parseDOM(html, 'div', attrs={'id': torrent_id})[0]).encode('utf-8')
-        title = find_between(content, 'Раздел:</b>', '<br')
-        title = title + find_between(content, 'Видео', 'Аудио').replace('Видео', '')
+        title = find_between(content, 'Видео', 'Аудио').replace('Видео', '')
         title = title + ' (' + find_between(content, 'Размер:</b>', '<').strip() + ')'
         if title[0] == ':': title = title[1:]
-        title = common.stripTags(title)
+        title = info + ', ' + common.stripTags(title)
+
+        info = '[COLOR=yellow]%s[/COLOR]' % info
 
         authors = [m.start() for m in re.finditer('Автор рипа:', content)]
 
         if len(authors) > 1:
-            info = '[B]Авторы рипов:[/B]\n'
+            info = info + '\n[B]Авторы рипов:[/B]\n'
         else:
-            info = '[B]Автор рипа:[/B] '
+            info = info + '\n[B]Автор рипа:[/B] '
         for a in authors:
             info += common.stripTags(find_between(content[a:], 'Автор рипа:', '<b')) + '\n'
 
-        info = info + '\n' + common.stripTags(plot[i]).replace('\t', '').encode('utf-8')
+        counters = common.parseDOM(torrent, 'div', attrs={'class': 'torrent-counter'})[0]
+        info = info + '\n ' + re.sub(' +', ' ', common.stripTags(counters).encode('utf-8').strip())
 
         add_item(title, {'mode':'series','r':params['r'], 't':torrent_id}, fanart=fanart, banner=img, poster=img, plot=info)
 
