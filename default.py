@@ -348,31 +348,32 @@ def sub_release(params):
         info = common.stripTags(titles[i]).replace('\t', '').encode('utf-8').strip()
 
         torrent = common.parseDOM(container, 'div', attrs={'id':t[1:]})
-        url =  common.parseDOM(torrent, 'a', attrs={'class':'button--success button--big button--fluid'}, ret='href')[0]
+        url =  common.parseDOM(torrent, 'a', attrs={'class':'button--success button--big button--fluid'}, ret='href')
 
-        torrent_id = URL_RE.match(url).group(6)
-        content = (common.parseDOM(container, 'div', attrs={'id': torrent_id})[0]).encode('utf-8')
+        if url:
+            torrent_id = URL_RE.match(url[0]).group(6)
+            content = (common.parseDOM(container, 'div', attrs={'id': torrent_id})[0]).encode('utf-8')
 
-        title = find_between(content, 'Видео', 'Аудио').replace('Видео', '')
-        title = title + ' (' + find_between(content, 'Размер:</b>', '<').strip() + ')'
-        if title[0] == ':': title = title[1:]
-        title = info + ', ' + common.stripTags(title)
+            title = find_between(content, 'Видео', 'Аудио').replace('Видео', '')
+            title = title + ' (' + find_between(content, 'Размер:</b>', '<').strip() + ')'
+            if title[0] == ':': title = title[1:]
+            title = info + ', ' + common.stripTags(title)
 
-        info = '[COLOR=yellow]%s[/COLOR]' % info
+            info = '[COLOR=yellow]%s[/COLOR]' % info
 
-        authors = [m.start() for m in re.finditer('Автор рипа:', content)]
+            authors = [m.start() for m in re.finditer('Автор рипа:', content)]
 
-        if len(authors) > 1:
-            info = info + '\n[B]Авторы рипов:[/B]\n'
-        else:
-            info = info + '\n[B]Автор рипа:[/B] '
-        for a in authors:
-            info += common.stripTags(find_between(content[a:], 'Автор рипа:', '<b')) + '\n'
+            if len(authors) > 1:
+                info = info + '\n[B]Авторы рипов:[/B]\n'
+            else:
+                info = info + '\n[B]Автор рипа:[/B] '
+            for a in authors:
+                info += common.stripTags(find_between(content[a:], 'Автор рипа:', '<b')) + '\n'
 
-        counters = common.parseDOM(torrent, 'div', attrs={'class': 'torrent-counter'})[0]
-        info = info + '\n ' + re.sub(' +', ' ', common.stripTags(counters).encode('utf-8').strip())
+            counters = common.parseDOM(torrent, 'div', attrs={'class': 'torrent-counter'})[0]
+            info = info + '\n ' + re.sub(' +', ' ', common.stripTags(counters).encode('utf-8').strip())
 
-        add_item(title, {'mode':'series','r':params['r'], 't':torrent_id}, fanart=fanart, banner=img, poster=img, plot=info)
+            add_item(title, {'mode':'series','r':params['r'], 't':torrent_id}, fanart=fanart, banner=img, poster=img, plot=info)
 
     xbmcplugin.setContent(handle, 'episodes')
     xbmcplugin.endOfDirectory(handle)
