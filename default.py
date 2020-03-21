@@ -219,7 +219,7 @@ def get_release_info(url):
         info['enabled'] = False
 
     if isinstance(html, basestring):
-        desc = common.parseDOM(html, 'p', attrs={'class':'desc'})
+        desc = common.parseDOM(html, 'div', attrs={'class':'desc'})
         if len(desc) <> 0:
             info['plot'] = common.stripTags(common.replaceHTMLCodes(desc[0]).strip())
             if addon.getSetting('ShowAgeRating') == 'true':
