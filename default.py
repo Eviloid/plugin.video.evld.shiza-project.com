@@ -361,7 +361,7 @@ def sub_release(params):
 
             info = '[COLOR=yellow]%s[/COLOR]' % info
 
-            authors = [m.start() for m in re.finditer('Автор рипа:', content)]
+            authors = [m.start() for m in re.finditer(r'Автор рипа:', content)]
 
             if len(authors) > 1:
                 info = info + '\n[B]Авторы рипов:[/B]\n'
@@ -371,7 +371,7 @@ def sub_release(params):
                 info += common.stripTags(find_between(content[a:], 'Автор рипа:', '<b')) + '\n'
 
             counters = common.parseDOM(torrent, 'div', attrs={'class': 'torrent-counter'})[0]
-            info = info + '\n ' + re.sub(' +', ' ', common.stripTags(counters).encode('utf-8').strip())
+            info = info + '\n ' + re.sub(r' +', ' ', common.stripTags(counters).encode('utf-8').strip())
 
             add_item(title, {'mode':'series','r':params['r'], 't':torrent_id}, fanart=fanart, banner=img, poster=img, plot=info)
 
@@ -410,19 +410,19 @@ def sub_series(params):
 
 
 def sub_play_yatp(url, ind):
-    purl = 'plugin://plugin.video.yatp/?action=play&torrent=' + urllib.quote_plus(url) + '&file_index=' + str(ind)
+    purl = 'plugin://plugin.video.yatp/?action=play&torrent={0}&file_index={1}'.format(urllib.quote_plus(url), ind)
     item = xbmcgui.ListItem(path=purl)
     xbmcplugin.setResolvedUrl(handle, True, item)
 
 
 def sub_play_tam(url, ind):
-    purl ='plugin://plugin.video.tam/?mode=play&url='+ urllib.quote_plus(url) + '&ind=' + str(ind)
+    purl ='plugin://plugin.video.tam/?mode=play&url={0}&ind={1}'.format(urllib.quote_plus(url), ind)
     item = xbmcgui.ListItem(path=purl)
     xbmcplugin.setResolvedUrl(handle, True, item)
 
 
 def sub_play_elem(url, ind):
-    purl ='plugin://plugin.video.elementum/play?uri='+ urllib.quote_plus(url) + '&index=' + str(ind)
+    purl ='plugin://plugin.video.elementum/play?uri={0}&index={1}&oindex={1}'.format(urllib.quote_plus(url), ind)
     item = xbmcgui.ListItem(path=purl)
     xbmcplugin.setResolvedUrl(handle, True, item)
 
@@ -460,7 +460,7 @@ def sub_play(params):
         return
 
     if addon.getSetting('Engine') == '2':
-        sub_play_tam(uri, file_id)
+        sub_play_tam(temp_name, file_id)
         return
 
     if addon.getSetting('Engine') == '3':
@@ -483,8 +483,8 @@ def sub_play(params):
     # file_id = None
     # Flag will set to True when engine is ready to resolve URL to XBMC
     ready = False
-    # Set pre-buffer size to 15Mb. This is a size of file that need to be downloaded before we resolve URL to XMBC 
-    pre_buffer_bytes = 15 * 1024 * 1024
+    # Set pre-buffer size to 24Mb. This is a size of file that need to be downloaded before we resolve URL to XMBC 
+    pre_buffer_bytes = 24 * 1024 * 1024
     
     engine = Engine(uri, download_path=DDir)
     with closing(engine):
