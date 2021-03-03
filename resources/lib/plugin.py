@@ -64,14 +64,18 @@ class Plugin():
     def url(self):
         return self._url
 
+
     def get_setting(self, key):
         return self.addon.getSetting(key)
+
 
     def set_setting(self, key, value):
         self.addon.setSetting(key, value)
 
+
     def open_settings(self):
         self.addon.openSettings()
+
 
     def _load_cookie(self):
         cookiefile = xbmcvfs.translatePath(os.path.join(self.addon_data, 'fcookie.txt'))
@@ -90,6 +94,7 @@ class Plugin():
         if self._cookie:
             self._cookie.save()
 
+
     def main(self):
         common.plugin   = self.name
         self._url       = sys.argv[0]
@@ -99,8 +104,8 @@ class Plugin():
         xbmcplugin.setContent(self.handle, 'tvshows')
 
         self._load_cookie()
-
         self._router.route(self)
+
 
 def run():
     plugin = Plugin(PLUGIN_NAME)

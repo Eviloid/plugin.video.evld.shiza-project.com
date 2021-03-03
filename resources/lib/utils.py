@@ -74,7 +74,7 @@ def open_info_window(title, content, timeout=1):
         # Wait for window to open
         start_time = time.time()
         while (not xbmc.getCondVisibility("Window.IsVisible({})".format(window_id)) and
-               time.time() - start_time < timeout):
+                time.time() - start_time < timeout):
             xbmc.sleep(50)
 
         w.getControl(control_label).setLabel(title)
@@ -101,6 +101,7 @@ def _parse_myvi(url):
 
     return result
 
+
 def _parse_sibnet(url):
     html = get_html(url)
 
@@ -119,6 +120,7 @@ def _parse_sibnet(url):
             result['thumb'] = t.group(1)
 
     return result
+
 
 def _parse_vk(url):
     html = get_html(url)
@@ -145,6 +147,7 @@ def _parse_vk(url):
             
     return result
 
+
 def parse_online_videos(url):
     url = common.replaceHTMLCodes(url)
     if 'sibnet.ru' in url:
@@ -155,6 +158,7 @@ def parse_online_videos(url):
         return _parse_myvi(url)
 
     return False
+
 
 def get_online_video_url(url):
     data = {}
@@ -174,14 +178,57 @@ def get_online_video_url(url):
 
     return None
 
+
 def clean_cache():
     from tccleaner import TextureCacheCleaner as tcc
     tcc().remove_like('%shiza-project.com/upload/covers/%', True)
     tcc().remove_like('%video.sibnet.ru/upload/cover/%', True)
 
 
+class BencodeException(Exception):
+    pass
+
 def bdecode(data):
-    '''Main function to decode bencoded data'''
+    _decimal_match = re.compile(r'\d')
+
+    def _dechunk(chunks):
+        item = chunks.pop()
+
+        if item == 'd': 
+            item = chunks.pop()
+            hash = {}
+            while item != 'e':
+                chunks.append(item)
+                key = _dechunk(chunks)
+                hash[key] = _dechunk(chunks)
+                item = chunks.pop()
+            return hash
+        elif item == 'l':
+            item = chunks.pop()
+            list = []
+            while item != 'e':
+                chunks.append(item)
+                list.append(_dechunk(chunks))
+                item = chunks.pop()
+            return list
+        elif item == 'i':
+            item = chunks.pop()
+            num = ''
+            while item != 'e':
+                num  += item
+                item = chunks.pop()
+            return int(num)
+        elif _decimal_match.search(item):
+            num = ''
+            while _decimal_match.search(item):
+                num += item
+                item = chunks.pop()
+            line = ''
+            for i in range(int(num)):
+                line += chunks.pop()
+            return line
+        raise BencodeException('Invalid torrent file')
+
     chunks = []
     for item in list(data):
         chunks.append(chr(item))
@@ -189,46 +236,3 @@ def bdecode(data):
 
     root = _dechunk(chunks)
     return root
-
-class BencodeException(Exception):
-    pass
-
-_decimal_match = re.compile(r'\d')
-
-def _dechunk(chunks):
-    item = chunks.pop()
-
-    if item == 'd': 
-        item = chunks.pop()
-        hash = {}
-        while item != 'e':
-            chunks.append(item)
-            key = _dechunk(chunks)
-            hash[key] = _dechunk(chunks)
-            item = chunks.pop()
-        return hash
-    elif item == 'l':
-        item = chunks.pop()
-        list = []
-        while item != 'e':
-            chunks.append(item)
-            list.append(_dechunk(chunks))
-            item = chunks.pop()
-        return list
-    elif item == 'i':
-        item = chunks.pop()
-        num = ''
-        while item != 'e':
-            num  += item
-            item = chunks.pop()
-        return int(num)
-    elif _decimal_match.search(item):
-        num = ''
-        while _decimal_match.search(item):
-            num += item
-            item = chunks.pop()
-        line = ''
-        for i in range(int(num)):
-            line += chunks.pop()
-        return line
-    raise BencodeException('Invalid torrent file')

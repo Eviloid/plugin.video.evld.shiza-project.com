@@ -29,30 +29,18 @@ class Router():
         return routes
 
     def _add_item(self, title, params={}, arts={}, plot='', isFolder=False, isPlayable=False, url=None):
-        ''' Добавление пункта меню '''
         if url is None:
             url = '%s?%s' % (self._plugin.url, urlparse.urlencode(params))
 
         item = xbmcgui.ListItem(title)
         item.setInfo(type='video', infoLabels={'title':title, 'plot':plot})
 
+        item.setArt(arts)
+
         if isPlayable:
             item.setProperty('isPlayable', 'true')
             item.setProperty('mediatype', 'video')
     
-        if arts.get('icon'):
-            item.setArt({'icon'  : arts['icon']})
-        if arts.get('thumb'):
-            item.setArt({'thumb' : arts['thumb']})
-        if arts.get('banner'):
-            item.setArt({'banner': arts['banner']})
-        if arts.get('fanart'):
-            item.setArt({'fanart': arts['fanart']})
-        if arts.get('poster'):
-            item.setArt({'poster': arts['poster']})
-        if arts.get('thumb'):
-            item.setArt({'thumb' : arts['thumb']})
-
         xbmcplugin.addDirectoryItem(self._plugin.handle, url=url, listitem=item, isFolder=isFolder)
 
     def _login(self):
@@ -70,8 +58,6 @@ class Router():
             self._plugin.open_settings()
 
     def _main_menu(self):
-        ''' Формирует главное меню '''
-
         scraper = ShizaScraper()
         auth = scraper.check_auth()
 
@@ -107,7 +93,6 @@ class Router():
         elif mode == 'favorite':
             items = scraper.get_favorite()
         elif mode == 'search':
-            #import web_pdb; web_pdb.set_trace()
             items = scraper.find_all()
         else:
             items = {}
@@ -142,7 +127,6 @@ class Router():
 
             if type == 'info':
                 self._add_item(title, {'mode':'info'}, arts={'fanart':fanart, 'banner':fanart, 'poster':image}, plot=plot)
-                # грязный хак что бы с сайта повторно не тянуть ;)
                 xbmcgui.Window(10000).setProperty('SHIZA_PLOT', u"{}".format(plot))
 
             elif type == 'online':

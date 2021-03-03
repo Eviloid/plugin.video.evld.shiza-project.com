@@ -25,12 +25,12 @@ class ShizaScraper():
 
     @property
     def total_page(self):
-        ''' Общее количество страниц '''
         return self._total_page
     
     @classmethod
     def fetch(self, url, params={}, post={}, headers={}):
         return utils.get_html(url, params, post, headers)
+
 
     def check_auth(self):
         try:
@@ -60,6 +60,7 @@ class ShizaScraper():
                     break
             if i.isdigit():
                 self._total_page = int(i)
+
 
     def _parse_releases(self):
         items = []
@@ -172,8 +173,10 @@ class ShizaScraper():
 
         return items
 
+
     def get_torrent(self, release_id, torrent_id):
         return ShizaScraper.fetch('{0}/download/torrents/{1}/{2}'.format(BASE_URL, release_id, torrent_id))
+
 
     def get_torrent_items(self, release_id, torrent_id):
 
@@ -196,10 +199,12 @@ class ShizaScraper():
 
         return items
 
+
     def get_all(self):
         self._html = ShizaScraper.fetch(BASE_URL, {'page':self.page})
         self._check_pagination()
         return self._parse_releases()
+
 
     def find_all(self):
         query = self._query
@@ -208,30 +213,36 @@ class ShizaScraper():
         self._check_pagination()
         return self._parse_releases()
 
+
     def get_ongoing(self):
         self._html = ShizaScraper.fetch('{}/status/ongoing'.format(BASE_URL), {'page':self.page})
         self._check_pagination()
         return self._parse_releases()
+
 
     def get_novelty(self):
         self._html = ShizaScraper.fetch('{}/status/novelty'.format(BASE_URL), {'page':self.page})
         self._check_pagination()
         return self._parse_releases()
 
+
     def get_completed(self):
         self._html = ShizaScraper.fetch('{}/status/completed'.format(BASE_URL), {'page':self.page})
         self._check_pagination()
         return self._parse_releases()
+
 
     def get_suspended(self):
         self._html = ShizaScraper.fetch('{}/status/suspended'.format(BASE_URL), {'page':self.page})
         self._check_pagination()
         return self._parse_releases()
 
+
     def get_favorite(self):
         self._html = ShizaScraper.fetch('{}/releases/favorite'.format(BASE_URL), {'page':self.page})
         self._check_pagination()
         return self._parse_releases()
+
 
     def get_release(self, id):
         self._html = ShizaScraper.fetch('{0}/releases/view/{1}'.format(BASE_URL, id))
