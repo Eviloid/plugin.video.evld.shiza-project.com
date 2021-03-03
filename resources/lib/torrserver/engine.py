@@ -16,6 +16,7 @@ class Engine(object):
         self.success = True
         self.version = None
         self.hash = None
+        self._store = False
         self._preload_size = 20
         self._index = 0
 
@@ -28,7 +29,7 @@ class Engine(object):
         return self._get_url()
 
     def make_url(self, path):
-        return 'http://' + self.host + ':' + str(self.port) + path
+        return 'http://{0}:{1}{2}'.format(self.host, self.port, path)
 
     def encode_multipart_formdata(self, data):
         body = BytesIO()
@@ -55,6 +56,8 @@ class Engine(object):
             headers = {'Content-Type':content_type, 'Content-Length':len(data)}
         elif data:
             data = json.dumps(data).encode('utf-8')
+        else:
+            data = None
 
         request = urlrequest.Request(url, data, headers=headers)
         conn = urlrequest.urlopen(request)
@@ -64,8 +67,6 @@ class Engine(object):
 
         if conn.headers.get_content_charset():
             result = result.decode(conn.headers.get_content_charset())
-
-
         return result
 
     def echo(self):
@@ -77,7 +78,10 @@ class Engine(object):
         return True
 
     def close(self):
-        self.drop()
+        if self._store:
+            self.drop()
+        else:
+            self.rem()
 
     def stat(self):
         return json.loads(self.request('stat', data={'Hash': self.hash}))
@@ -87,17 +91,17 @@ class Engine(object):
 
     def get(self):
         return json.loads(self.request('get', data={'Hash': self.hash}))
+
+    def add(self, url):
+        r = self.request('add', data={'Link': url, 'DontSave': not self._store})
+        self.hash = r
+        return True
         
     def rem(self):
         self.request('rem', data={'Hash': self.hash})
 
     def drop(self):
         self.request('drop', data={'Hash': self.hash})
-
-    def add(self, uri):
-        r = json.loads(self.request('add', data={'Link': uri, "DontSave": True}))
-        self.hash = r[0]
-        return True
 
     def upload(self, data):
         r = json.loads(self.request('upload', data=data, is_file=True))
@@ -112,22 +116,28 @@ class Engine(object):
             pass
         return False
 
-    def preload(self, url):
+    def preload(self):
         try:
-            conn = urlrequest.urlopen(url, timeout=1.0).read(128)
+            preload_url = self._get_url('Preload')
+            if preload_url:
+                preload_url = preload_url.replace('&preload=true', '&preload={}'.format(self._preload_size)) # 1.77
+                preload_url = preload_url.replace('/preload/', '/preload/{}/'.format(self._preload_size)) # 1.76
+                conn = urlrequest.urlopen(preload_url, timeout=1.0).read(128)
         except:
             pass
 
-    def start(self, torrent, index=0, preload_size=20):
+    def start(self, torrent, index=0, preload_size=20, store=False):
         self._index = index
         self._preload_size = preload_size
-        self.upload(torrent)
+        self._store = store
 
-        preload_url = self._get_url('Preload')
-        preload_url = preload_url.replace('&preload=true', '&preload={}'.format(self._preload_size)) # 1.77
-        preload_url = preload_url.replace('/preload/', '/preload/{}/'.format(self._preload_size)) # 1.76
+        if torrent[:6] == 'magnet':
+            self.add(torrent)
+            time.sleep(0.5)
+        else:
+            self.upload(torrent)
 
-        self.preload(preload_url)
+        self.preload()
 
     def status(self):
         st = self.stat()
