@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import xbmc, xbmcgui, xbmcplugin
+import xbmc, xbmcgui, xbmcplugin, xbmcvfs
 import sys, os
 import urllib.parse as urlparse
 
@@ -186,9 +186,8 @@ class Router():
             if self._plugin.get_setting('Engine') == '0':
                 player.play_ts(self._plugin.handle, preload_size, self._plugin.get_setting('TSHost'), self._plugin.get_setting('TSPort'), torrent, index)
             else:
-                temp_name = os.path.join(xbmc.translatePath('special://masterprofile'), 'ani.torrent')
-
-                temp_file = open(temp_name.decode('utf-8') if sys.platform == 'win32' else temp_name, "wb")
+                temp_name = os.path.join(xbmcvfs.translatePath('special://masterprofile'), 'shiza.torrent')
+                temp_file = open(temp_name, "wb")
                 temp_file.write(torrent)
                 temp_file.close()
 
