@@ -66,7 +66,7 @@ class myPlayer(xbmc.Player):
         ov_image = os.path.join(xbmcvfs.translatePath('special://masterprofile'), 'bg.png')
 
         if not os.path.isfile(ov_image):
-            fl = open(ov_image_tmp, 'wb')
+            fl = open(ov_image, 'wb')
             fl.write(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='))
             fl.close()
         return ov_image
@@ -105,8 +105,6 @@ def play_ts(handle, preload_size, host, port, data, index=0):
     monitor = xbmc.Monitor()
 
     dialog = xbmcgui.DialogProgress()
-    dialog.create('TorrServer')
-    dialog.update(0, 'Подключение...')
 
     engine = torrserver.Engine(host=host, port=port)
 
@@ -118,6 +116,7 @@ def play_ts(handle, preload_size, host, port, data, index=0):
         with closing(engine):
             engine.start(data, index, preload_size)
             xbmc.sleep(500)
+            dialog.create('TorrServer')
 
             while engine.is_preloading():
                 seeders, preloaded, preload, speed = engine.status()
@@ -192,7 +191,7 @@ def play_t2h(handle, preload_size, uri, file_id=None, download_path=None):
     with closing(engine):
         engine.start(file_id)
         dialog.create('Torrent2Http', 'Запуск')
-        dialog.update(0, 'Torrent2Http', 'Загрузка торрента', '')
+        dialog.update(0, 'Загрузка торрента')
         while not monitor.abortRequested() and not ready:
             xbmc.sleep(500)
 
@@ -227,7 +226,7 @@ def play_t2h(handle, preload_size, uri, file_id=None, download_path=None):
                 getDownloadRate = status.download_rate / 1024 * 8
                 getSeeds = status.num_seeds
                 
-                dialog.update(int(100 * file_status.download / pre_buffer_bytes), 'Предварительная буферизация: {0:.0f} MB'.format(file_status.download / 1024 / 1024), 'Сиды: {0}'.format(getSeeds), 'Скорость: {0:6.2f} Mbit/s'.format(getDownloadRate))
+                dialog.update(int(100 * file_status.download / pre_buffer_bytes), 'Предварительная буферизация: {0:.0f} MB\nСиды: {1}\nСкорость: {2:6.2f} Mbit/s'.format(file_status.download / 1024 / 1024, getSeeds, getDownloadRate))
                 
             elif status.state in [State.FINISHED, State.SEEDING]:
                 ready = True
