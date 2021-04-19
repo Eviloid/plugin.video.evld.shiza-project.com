@@ -21,6 +21,7 @@ def get_html(url, params={}, post={}, headers={}):
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         request = urlrequest.Request(url, urlparse.urlencode(post).encode('utf-8'), headers=headers)
     else:
+        headers['Accept-Encoding'] = 'gzip, identity'
         request = urlrequest.Request(url, headers=headers)
 
     conn = urlrequest.urlopen(request)
