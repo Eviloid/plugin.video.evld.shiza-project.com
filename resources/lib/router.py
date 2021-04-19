@@ -195,9 +195,7 @@ class Router():
                     url ='plugin://plugin.video.elementum/play?uri='+ urlparse.quote_plus(temp_name) + '&index={0}&oindex={1}'.format(index, oindex)
                 else:
                     uri = 'file:///' + temp_name.replace('\\', '/')
-
-                player.play_t2h(self._plugin.handle, preload_size, uri, oindex)
-
+                    player.play_t2h(self._plugin.handle, preload_size, uri, oindex)
 
         if url:
             item = xbmcgui.ListItem(path=url)
