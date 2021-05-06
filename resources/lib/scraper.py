@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import xbmc
 import re, json
 
 from urllib.error import HTTPError
@@ -8,7 +7,7 @@ from urllib.error import HTTPError
 import CommonFunctions as common
 import utils
 
-BASE_URL = 'http://shiza-project.com'
+BASE_URL = 'https://shiza-project.com'
 
 
 class ScraperException(Exception):
@@ -247,4 +246,3 @@ class ShizaScraper():
     def get_release(self, id):
         self._html = ShizaScraper.fetch('{0}/releases/view/{1}'.format(BASE_URL, id))
         return self._parse_release()
-
