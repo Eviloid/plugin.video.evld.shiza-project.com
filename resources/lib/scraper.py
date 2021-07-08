@@ -4,23 +4,24 @@ import re, json
 
 from urllib.error import HTTPError
 
-import CommonFunctions as common
+import api
 import utils
-
-BASE_URL = 'https://shiza-project.com'
 
 
 class ScraperException(Exception):
     pass
 
 class ShizaScraper():
-    def __init__(self, page=None, query=None, hide_online=True):
-        self.page = int(page or 1)
-        self._query = query
+    def __init__(self, after=None, query=None, hide_online=True):
         self._hide_online = hide_online
-
+        self._after = after
+        self._query = query
         self._total_page = 0
-        self._html = ''
+        self._json = None
+
+    @property
+    def after(self):
+        return self._after
 
     @property
     def total_page(self):
@@ -32,154 +33,125 @@ class ShizaScraper():
 
 
     def check_auth(self):
-        try:
-            ShizaScraper.fetch('{}/releases/favorite'.format(BASE_URL))
-        except HTTPError as e:
-            if e.code == 403:
-                return False
-            else:
-                raise ScraperException('Ошибка соединения')
         return True
 
 
     def login(self, login, password):
-        post = {'field-email':login, 'field-password':password}
-        ShizaScraper.fetch('{}/accounts/login'.format(BASE_URL), post=post)
+        pass
 
 
     def _check_pagination(self):
-        self._total_page = 0
+        data = self._json['data'].get('releases', self._json['data'].get('collections'))
+        page_info = data['pageInfo']
 
-        pagination = common.parseDOM(self._html, 'ul', attrs={'class':'pagination pagination-centered'})
-        if pagination:
-            pages = common.parseDOM(pagination[0], 'a')
+        self._total_page = data.get('totalCount', 0) // api.ITEMS_PER_PAGE + 1
 
-            for i in pages[::-1]:
-                if i.isdigit():
-                    break
-            if i.isdigit():
-                self._total_page = int(i)
+        if page_info['hasNextPage']:
+            self._after = page_info['endCursor']
+        else:
+            self._after = ''
 
 
     def _parse_releases(self):
         items = []
 
-        releases = common.parseDOM(self._html, 'article', attrs={'class':'grid-card'})
+        releases = self._json['data']['releases']
 
-        for release in releases:
-            title = common.parseDOM(release, 'img', ret='alt')[0].replace('  ', ' ')
-            title = common.replaceHTMLCodes(title)
+        for release in releases['edges']:
+            node = release['node']
+            title = node['name']
 
-            img = BASE_URL + common.parseDOM(release, 'img', ret='src')[0]
-            url = common.parseDOM(release, 'a', attrs={'class':'card-box'}, ret='href')[0]
-            id = url.split('/')[-1]
+            announcement = ''
 
-            status = common.parseDOM(release, 'span', attrs={'class':'relstatus'})
-            if status:
-                plot = u'[COLOR yellow]{}[/COLOR]\n'.format(status[0].strip())
-            desc = common.parseDOM(release, 'a', attrs={'class':'card-box'}, ret='title')
-            if desc:
-                plot = plot + common.replaceHTMLCodes(desc[0])
+            if node['announcement']:
+                announcement = node['announcement']
+            elif node['episodesAired']:
+                announcement = 'Добавлена {:02d} серия'.format(node['episodesAired'])
+            
+            original = node['originalName']
+            genres = api.get_genres(node['genres'])
 
+            plot = f'[COLOR yellow]{announcement}[/COLOR]\n\n[COLOR gray]{original}[/COLOR]'
+            if genres:
+                plot = f'{plot}\n\nЖанры: [COLOR ff137ddc]{genres}[/COLOR]'
+
+            if node['season']:
+                plot = f'{plot}\n\nСезон: [COLOR ff137ddc]{api.get_season(node)}[/COLOR]'
+
+            id = node['id']
+            img = api.get_poster(node)
+
+            url = node['slug']
             items.append({'title':title, 'url':url, 'img':img, 'plot':plot, 'id':id})
+
         return items
 
 
     def _parse_release(self):
         items = []
 
-        covers = common.parseDOM(self._html, 'a', attrs={'class':'release-slider__item'}, ret='href')
-        img = ''
-        fanart = ''
+        release = self._json['data']['release']
 
-        if covers:
-            img = BASE_URL + covers[0]
+        plot = utils.clean_text(release['description'])
+        mpaa = release.get('rating', '')
+        if mpaa:
+            plot = f'[B][COLOR yellow]{api.mpaa_rus(mpaa)}[/COLOR][/B] {plot}'
 
-            if len(covers) > 1:
-                fanart = BASE_URL + covers[1]
-            else:
-                fanart = img
-
-        # описание
-        desc = common.parseDOM(self._html, 'div', attrs={'class':'desc'})
-        if desc:
-            plot = common.stripTags(common.replaceHTMLCodes(desc[0]).strip())
-            age = common.parseDOM(self._html, 'span', attrs={'class':'watermark grad-warning'})
-            if age:
-                plot = u'[B][COLOR yellow]{0}[/COLOR][/B] {1}'.format(age[0], plot)
+        fanart = release['cover']['original']['url'] if release['cover'] else ''
+        img = api.get_poster(release)
 
         items.append({'title':'Описание', 'img':img, 'fanart':fanart, 'plot':plot, 'type':'info'})
 
         # online
         if not self._hide_online:
-            videos = common.parseDOM(self._html, 'a', attrs={'data-fancybox':'online'}, ret='href')
-            if videos:
-                plots = common.parseDOM(self._html, 'a', attrs={'data-fancybox':'online'})
 
-                for i, v in enumerate(videos):
-                    data = utils.parse_online_videos(v)
+            # trailer
+            if release['videos']:
+                data = utils.parse_online_videos([v['embedUrl'] for v in release['videos']])
+                if data:
+                    url = data['url']
+                    thumb = data['thumb']
+                    video = data['embed']
+
+                    if url[:4] == 'http':
+                        items.append({'title':'Трейлер', 'thumb':thumb, 'fanart':fanart, 'url':video, 'type':'online'})
+
+            for episode in release['episodes']:
+                title = f'{episode["number"]}. {episode["name"]}'
+
+                if episode['videos']:
+                    data = utils.parse_online_videos([v['embedUrl'] for v in episode['videos']])
                     if not data:
                         continue
 
-                    title = common.parseDOM(plots[i], 'p')[0]
                     url = data['url']
                     thumb = data['thumb']
+                    video = data['embed']
 
                     if url[:4] == 'http':
-                        items.append({'title':title, 'thumb':thumb, 'fanart':fanart, 'url':v, 'type':'online'})
+                        items.append({'title':title, 'thumb':thumb, 'fanart':fanart, 'url':video, 'type':'online'})
                     else:
-                        title = u'[COLOR red] {} [/COLOR]'.format(title)
-                        url = u'[COLOR red] {} [/COLOR]'.format(url)
+                        title = f'[COLOR red]{title}[/COLOR]'
+                        url = f'[COLOR red]{url}[/COLOR]'
                         items.append({'title':title, 'thumb':img, 'fanart':fanart, 'plot':url, 'type':'offline'})
 
         # torrents
-        titles = common.parseDOM(self._html, 'a', attrs={'data-toggle':'tab'})
-        tabs = common.parseDOM(self._html, 'a', attrs={'data-toggle':'tab'}, ret='href')
-
-        container = common.parseDOM(self._html, 'div', attrs={'class':'tab-content'})
-
-        for i, t in enumerate(tabs):
-            info = common.stripTags(titles[i]).replace('\t', '').strip()
-
-            torrent = common.parseDOM(container, 'div', attrs={'id':t[1:]})
-            url =  common.parseDOM(torrent, 'a', attrs={'class':'button--success button--big button--fluid'}, ret='href')
-
-            if url:
-                id = url[0].split('/')[-1]
-
-                content = (common.parseDOM(container, 'div', attrs={'id': id})[0])
-
-                title = utils.find_between(content, 'Видео', 'Аудио').replace('Видео', '')
-                title = title + ' (' + utils.find_between(content, 'Размер:</b>', '<').strip() + ')'
-                if title[0] == ':': title = title[1:]
-                title = info + ', ' + common.stripTags(title)
-
-                info = '[COLOR=yellow]{}[/COLOR]'.format(info)
-
-                authors = [m.start() for m in re.finditer(r'Автор рипа:', content)]
-
-                if len(authors) > 1:
-                    info = '{}\n[B]Авторы рипов:[/B]\n'.format(info)
-                else:
-                    info = '{}\n[B]Автор рипа:[/B] '.format(info)
-                for a in authors:
-                    info = '{0}{1}\n'.format(info, common.stripTags(utils.find_between(content[a:], 'Автор рипа:', '<b')))
-
-                counters = common.parseDOM(torrent, 'div', attrs={'class': 'torrent-counter'})[0]
-                info = '{0}\n {1}'.format(info, re.sub(r' +', ' ', common.stripTags(counters).strip()))
-
-                items.append({'title':title, 'img':img, 'fanart':fanart, 'plot':info, 'id':id, 'type':'torrent'})
+        for torrent in release['torrents']:
+            title = torrent['synopsis'] if torrent['synopsis'] else f'{torrent["videoFormat"]} {torrent["videoQualities"][0]}'
+            title = '{0} ({1:.2f} GB)'.format(title, float(torrent['size']) / 1024 / 1024 / 1024)
+            plot = f'Seeders: {torrent["seeders"]}\n\n{torrent["metadata"]}'
+            items.append({'title':title, 'img':img, 'fanart':fanart, 'plot':plot, 'id':torrent['id'], 'type':'torrent'})
 
         return items
 
 
-    def get_torrent(self, release_id, torrent_id):
-        return ShizaScraper.fetch('{0}/download/torrents/{1}/{2}'.format(BASE_URL, release_id, torrent_id))
+    def get_torrent(self, torrent_id):
+        return ShizaScraper.fetch('{0}/torrents/{1}/download'.format(api.BASE_URL, torrent_id))
 
 
-    def get_torrent_items(self, release_id, torrent_id):
+    def get_torrent_items(self, torrent_id):
 
-        torrent_data = self.get_torrent(release_id, torrent_id)
+        torrent_data = self.get_torrent(torrent_id)
 
         data = utils.bdecode(torrent_data)
 
@@ -200,49 +172,42 @@ class ShizaScraper():
 
 
     def get_all(self):
-        self._html = ShizaScraper.fetch(BASE_URL, {'page':self.page})
+        query = api.get_all_query(self.after, self._query)
+        answer = ShizaScraper.fetch(api.BASE_API_URL, post=query)
+        self._json = json.loads(answer)
         self._check_pagination()
         return self._parse_releases()
-
-
-    def find_all(self):
-        query = self._query
-
-        self._html = ShizaScraper.fetch('{}/releases/search'.format(BASE_URL), {'page':self.page, 'q':query})
-        self._check_pagination()
-        return self._parse_releases()
-
 
     def get_ongoing(self):
-        self._html = ShizaScraper.fetch('{}/status/ongoing'.format(BASE_URL), {'page':self.page})
+        query = api.get_ongoing_query(self.after)
+        answer = ShizaScraper.fetch(api.BASE_API_URL, post=query)
+        self._json = json.loads(answer)
         self._check_pagination()
         return self._parse_releases()
 
 
-    def get_novelty(self):
-        self._html = ShizaScraper.fetch('{}/status/novelty'.format(BASE_URL), {'page':self.page})
+    def get_workin(self):
+        query = api.get_workin_query(self.after)
+        answer = ShizaScraper.fetch(api.BASE_API_URL, post=query)
+        self._json = json.loads(answer)
         self._check_pagination()
         return self._parse_releases()
 
 
     def get_completed(self):
-        self._html = ShizaScraper.fetch('{}/status/completed'.format(BASE_URL), {'page':self.page})
-        self._check_pagination()
-        return self._parse_releases()
-
-
-    def get_suspended(self):
-        self._html = ShizaScraper.fetch('{}/status/suspended'.format(BASE_URL), {'page':self.page})
+        query = api.get_completed_query(self.after)
+        answer = ShizaScraper.fetch(api.BASE_API_URL, post=query)
+        self._json = json.loads(answer)
         self._check_pagination()
         return self._parse_releases()
 
 
     def get_favorite(self):
-        self._html = ShizaScraper.fetch('{}/releases/favorite'.format(BASE_URL), {'page':self.page})
-        self._check_pagination()
-        return self._parse_releases()
+        return []
 
 
     def get_release(self, id):
-        self._html = ShizaScraper.fetch('{0}/releases/view/{1}'.format(BASE_URL, id))
+        query = api.get_release_query(id)
+        answer = ShizaScraper.fetch(api.BASE_API_URL, post=query)
+        self._json = json.loads(answer)
         return self._parse_release()

@@ -23,17 +23,20 @@ class Router():
             'search': self._search,
             'info': self._show_info,
             'play': self._play,
+            'radio': self._radio,
             'torrent': self._show_torrent,
+            'home': self._home,
             'cleancache': self._cleancache,
         }
         return routes
 
-    def _add_item(self, title, params={}, arts={}, plot='', isFolder=False, isPlayable=False, url=None):
+    def _add_item(self, title, params={}, arts={}, plot='', isFolder=False, isPlayable=False, url=None, info={}):
         if url is None:
             url = '%s?%s' % (self._plugin.url, urlparse.urlencode(params))
 
         item = xbmcgui.ListItem(title)
-        item.setInfo(type='video', infoLabels={'title':title, 'plot':plot})
+        info.update({'title':title, 'plot':plot})
+        item.setInfo(type='video', infoLabels=info)
 
         item.setArt(arts)
 
@@ -66,34 +69,29 @@ class Router():
 
         self._add_item('Все',                {'mode':'all'},       arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
         self._add_item('Онгоинги',           {'mode':'ongoing'},   arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
-        self._add_item('Новинки',            {'mode':'novelty'},   arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
+        self._add_item('В работе',           {'mode':'workin'},    arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
         self._add_item('Завершенные',        {'mode':'completed'}, arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
-        self._add_item('Приостановленные',   {'mode':'suspended'}, arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
-
-        if auth:
-            self._add_item('Избранные',      {'mode':'favorite'},  arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
-
+        self._add_item('Радио Shiza-Project', {'mode':'radio'},    arts={'fanart':self._plugin.fanart, 'thumb':self._plugin.icon}, isPlayable=True, info={'watched':'False'})
         self._add_item('Поиск',              {'mode':'search'},    arts={'fanart':self._plugin.fanart, 'icon':'DefaultAddonsSearch.png'}, isFolder=True)
         xbmcplugin.endOfDirectory(self._plugin.handle, True)
 
     def _sub_menu(self):
-        scraper = ShizaScraper(page=self._params.get('page'), query=self._params.get('query'))
+        scraper = ShizaScraper(after=self._params.get('after'), query=self._params.get('query'))
         mode = self._params.get('mode')
 
         if mode == 'all':
             items = scraper.get_all()
         elif mode == 'ongoing':
             items = scraper.get_ongoing()
-        elif mode == 'novelty':
-            items = scraper.get_novelty()
+        elif mode == 'workin':
+            items = scraper.get_workin()
         elif mode == 'completed':
             items = scraper.get_completed()
-        elif mode == 'suspended':
-            items = scraper.get_suspended()
         elif mode == 'favorite':
             items = scraper.get_favorite()
         elif mode == 'search':
-            items = scraper.find_all()
+            xbmcplugin.setPluginCategory(self._plugin.handle, category='Search')
+            items = scraper.get_all()
         else:
             items = {}
 
@@ -101,13 +99,19 @@ class Router():
             title = item.get('title', '')
             image = item.get('img')
             plot  = item.get('plot', '')
-            id    = item.get('id')
+            id    = item.get('url')
             self._add_item(title, {'mode':'release', 'id':id}, arts={'fanart':image, 'banner':image, 'poster':image}, plot=plot, isFolder=True)
 
-        if scraper.total_page > 0:
-            if scraper.total_page >= scraper.page + 1:
-                self._params['page'] = scraper.page + 1
-                self._add_item('Далее > {0} из {1}'.format(scraper.page + 1, scraper.total_page), params=self._params, isFolder=True)
+        if scraper.after:
+            arts={'fanart':self._plugin.fanart}
+
+            self._params['after'] = scraper.after
+            self._params['page'] = int(self._params.get('page', 1)) + 1
+            self._add_item('Далее > {0} из {1}'.format(self._params['page'], scraper.total_page), params=self._params, arts=arts, isFolder=True)
+
+            if self._params['page'] > 3:
+                arts.update({'icon': 'DefaultFolderBack.png'})
+                self._add_item('<< В начало', params={'mode':'home'}, arts=arts)
 
         xbmcplugin.endOfDirectory(self._plugin.handle, True)
 
@@ -119,7 +123,7 @@ class Router():
             title  = item.get('title', '')
             image  = item.get('img')
             thumb  = item.get('thumb')
-            fanart = item.get('fanart')
+            fanart = item.get('fanart') if item.get('fanart') else self._plugin.fanart
             plot   = item.get('plot', '')
             url    = item.get('url')
             id     = item.get('id')
@@ -133,7 +137,7 @@ class Router():
                 self._add_item(title, {'mode':'play', 'url':url}, arts={'fanart':fanart, 'banner':fanart, 'thumb':thumb}, isPlayable=True)
 
             elif type == 'offline':
-                self._add_item(title, {}, arts={'fanart':fanart, 'banner':fanart, 'poster':image}, plot=plot)
+                self._add_item(title, {}, arts={'fanart':fanart, 'icon':self._plugin.icon}, plot=plot)
 
             elif type == 'torrent':
                 self._add_item(title, {'mode':'torrent', 'release':self._params.get('id'), 'id':id}, arts={'fanart':fanart, 'banner':fanart, 'poster':image}, plot=plot, isFolder=True)
@@ -144,13 +148,12 @@ class Router():
     def _show_torrent(self):
         scraper = ShizaScraper()
 
-        release_id = self._params.get('release')
         torrent_id = self._params.get('id')
 
-        items = scraper.get_torrent_items(release_id, torrent_id)
+        items = scraper.get_torrent_items(torrent_id)
 
         for i, item in enumerate(items):
-            self._add_item(item['title'], {'mode':'play', 'release': release_id, 'id':torrent_id, 'index':i, 'oindex':item['id']}, arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isPlayable=True)
+            self._add_item(item['title'], {'mode':'play', 'id':torrent_id, 'index':i, 'oindex':item['id']}, arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isPlayable=True)
 
         xbmcplugin.setContent(self._plugin.handle, 'files')
         xbmcplugin.endOfDirectory(self._plugin.handle, True)
@@ -173,13 +176,12 @@ class Router():
         if url:
             url = utils.get_online_video_url(url)
         else:
-            release_id = self._params.get('release')
             torrent_id = self._params.get('id')
             index = int(self._params.get('index', 0))
             oindex = int(self._params.get('oindex', 0))
             preload_size = int(self._plugin.get_setting('Preload'))
 
-            torrent = ShizaScraper().get_torrent(release_id, torrent_id)
+            torrent = ShizaScraper().get_torrent(torrent_id)
 
             import player
 
@@ -201,6 +203,14 @@ class Router():
             item = xbmcgui.ListItem(path=url)
             xbmcplugin.setResolvedUrl(self._plugin.handle, True, item)
         
+    def _radio(self):
+        item = xbmcgui.ListItem(path='https://radio.shiza-project.com/ara-ara')
+        xbmcplugin.setResolvedUrl(self._plugin.handle, True, item)
+
+    def _home(self):
+        xbmc.executebuiltin('Container.Update({}, replace)'.format(self._plugin.url))
+        xbmcplugin.endOfDirectory(self._plugin.handle, True, True)
+
     def _show_info(self):
         info = xbmcgui.Window(10000).getProperty('SHIZA_PLOT')
         utils.open_info_window('Описание', info)

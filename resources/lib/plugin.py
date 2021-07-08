@@ -9,8 +9,6 @@ import urllib.request as urlrequest
 import urllib.parse as urlparse
 import urllib.error as urlerror
 
-
-import CommonFunctions as common
 import router
 import utils
 
@@ -96,7 +94,6 @@ class Plugin():
 
 
     def main(self):
-        common.plugin   = self.name
         self._url       = sys.argv[0]
         self._handle    = int(sys.argv[1])
         self._params    = utils.get_params(sys.argv[2])

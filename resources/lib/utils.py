@@ -7,21 +7,23 @@ import xbmc, xbmcgui
 
 import CommonFunctions as common
 
-__all__ = ['get_html', 'get_params', 'find_beetwin', 'open_info_window', 'parse_online_videos', 'get_online_video_url', 'bdecode', 'clean_cache']
-
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36'
 
 def get_html(url, params={}, post={}, headers={}):
     headers['User-Agent'] = USER_AGENT
+    headers['Accept-Encoding'] = 'gzip, identity'
 
     if params:
         url = '{0}?{1}'.format(url, urlparse.urlencode(params))
 
     if post:
-        headers['Content-Type'] = 'application/x-www-form-urlencoded'
-        request = urlrequest.Request(url, urlparse.urlencode(post).encode('utf-8'), headers=headers)
+        if isinstance(post, dict):
+            headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            request = urlrequest.Request(url, urlparse.urlencode(post).encode('utf-8'), headers=headers)
+        else:
+            headers['Content-Type'] = 'application/json'
+            request = urlrequest.Request(url, post.encode('utf-8'), headers=headers)
     else:
-        headers['Accept-Encoding'] = 'gzip, identity'
         request = urlrequest.Request(url, headers=headers)
 
     conn = urlrequest.urlopen(request)
@@ -56,11 +58,8 @@ def get_params(argv):
     return param
 
 
-def find_between(string, left, right):
-    result = re.search(r'{0}(.*?){1}'.format(left, right), string)
-    if result:
-        return result.group(1)
-    return ''
+def clean_text(txt):
+    return common.stripTags(common.replaceHTMLCodes(txt)) if txt else ''
 
 
 def open_info_window(title, content, timeout=1):
@@ -108,17 +107,20 @@ def _parse_sibnet(url):
 
     result = {'url':'Видео недоступно', 'thumb':''}
 
-    s = re.search(r'<div class=videostatus><p>(.*?)</p>', html)
-    if s:
-        result['url'] = s.group(1).decode('cp1251')
-    else:
-        s = re.search(r'player.src\(\[{src: "(.*?)"', html)
+    try:
+        s = re.search(r'<div class=videostatus><p>(.*?)</p>', html)
         if s:
-            result['url'] = 'https://video.sibnet.ru' + s.group(1) + '|referer=' + url
+            result['url'] = s.group(1).decode('cp1251')
+        else:
+            s = re.search(r'player.src\(\[{src: "(.*?)"', html)
+            if s:
+                result['url'] = 'https://video.sibnet.ru' + s.group(1) + '|referer=' + url
 
-        t = re.search(r'meta property="og:image" content="(.*?)"/>', html)
-        if t:
-            result['thumb'] = t.group(1)
+            t = re.search(r'meta property="og:image" content="(.*?)"/>', html)
+            if t:
+                result['thumb'] = t.group(1)
+    except:
+        pass
 
     return result
 
@@ -128,37 +130,46 @@ def _parse_vk(url):
 
     result = {'url':'Видео недоступно', 'thumb':''}
 
-    href = common.parseDOM(html, 'a', attrs={'class':'flat_button button_big'}, ret='href')
-    if href:
-        html = get_html('https:%s' % href[0])
+    try:
+        href = common.parseDOM(html, 'a', attrs={'class':'flat_button button_big'}, ret='href')
+        if href:
+            html = get_html(re.sub(r'^//', 'https://', href[0]))
 
-        t = re.search(r'"info":\[.*?,"(.*?)"', html)
-        if t:
-            result['thumb'] = t.group(1).replace(r'\/', '/')
-    else:
-        t = common.parseDOM(html, 'div', attrs={'class':'video_box_msg_background'}, ret='style')
-        if t:
-            s = re.search(r'url\((.*?)\);', t[0])
-            if s:
-                result['thumb'] = s.group(1)
+            t = re.search(r'"info":\[.*?,"(.*?)"', html)
+            if t:
+                result['thumb'] = t.group(1).replace(r'\/', '/')
+        else:
+            t = common.parseDOM(html, 'div', attrs={'class':'video_box_msg_background'}, ret='style')
+            if t:
+                s = re.search(r'url\((.*?)\);', t[0])
+                if s:
+                    result['thumb'] = s.group(1)
 
-    s = re.findall(r'"url(\d+)":"(.+?)"', html)
-    if s:
-        result['url'] = s[-1][1].replace(r'\/', '/')
+        s = re.findall(r'"url(\d+)":"(.+?)"', html)
+        if s:
+            result['url'] = s[-1][1].replace(r'\/', '/')
+    except:
+        pass
             
     return result
 
 
-def parse_online_videos(url):
-    url = common.replaceHTMLCodes(url)
-    if 'sibnet.ru' in url:
-        return _parse_sibnet(url)
-    elif 'vk.com' in url:
-        return _parse_vk(url)
-    elif 'myvi.ru' in url:
-        return _parse_myvi(url)
+def parse_online_videos(urls):
+    result = {'embed':'', 'url':'Видео недоступно', 'thumb':''}
 
-    return False
+    for url in urls:
+        if 'sibnet.ru' in url:
+            result.update(_parse_sibnet(url))
+        elif 'vk.com' in url:
+            result.update(_parse_vk(url))
+        elif 'myvi.ru' in url:
+            result.update(_parse_myvi(url))
+
+        if result.get('url', '')[:4] == 'http':
+            result['embed'] = url
+            break
+
+    return result
 
 
 def get_online_video_url(url):
