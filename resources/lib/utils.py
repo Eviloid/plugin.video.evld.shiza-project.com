@@ -158,6 +158,11 @@ def parse_online_videos(urls):
     result = {'embed':'', 'url':'Видео недоступно', 'thumb':''}
 
     for url in urls:
+        # fix url
+        s = re.search(r'(.*?)"', url)
+        if s:
+            url = s.group(1)
+
         if 'sibnet.ru' in url:
             result.update(_parse_sibnet(url))
         elif 'vk.com' in url:
