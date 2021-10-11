@@ -168,7 +168,9 @@ def _get_release_query(after=None, query=None):
 
 
 def get_all_query(after=None, query=None):
-    return json.dumps(_get_release_query(after, query))
+    graphql = _get_release_query(after, query)
+    graphql['variables']['activity'].update({'include': ['WORK_IN_PROGRESS', 'COMPLETED']})
+    return json.dumps(graphql)
 
 
 def get_ongoing_query(after=None):
