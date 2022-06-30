@@ -13,7 +13,7 @@ def get_genres(genres):
     return ', '.join([g['name'] for g in genres])
 
 def get_season(node):
-    return u'{0}{1}'.format({'WINTER':u'зима ', 'FALL':u'осень ', 'SUMMER':u'лето ', 'SPRING':u'весна '}.get(node['season'], ''), node['seasonYear'])
+    return '{0}{1}'.format({'WINTER':'зима ', 'FALL':'осень ', 'SUMMER':'лето ', 'SPRING':'весна '}.get(node['season'], ''), node['seasonYear'])
 
 def get_poster(node):
     return node['posters'][0]['preview']['url'] if node['posters'] else '{}/_nuxt/img/no-poster.313f19e.png'.format(BASE_URL)
