@@ -154,6 +154,43 @@ def _parse_vk(url):
     return result
 
 
+def _parse_kodik(url, info_only=True):
+    result = {'url':'Видео недоступно', 'thumb':''}
+
+    try:
+
+        html = get_html(url)
+
+        if info_only:
+            s = re.search(r'nails = \[(".*?")\]', html)
+            if s:
+                thumbs = s.group(1).split(',')
+                result['url'] = '//'
+                result['thumb'] =  thumbs[0].strip(' "')
+
+        else:
+            s = re.search(r"data-code='(//.*?)'", html)
+            if s:
+                url = s.group(1)    
+
+            video_type, video_id, video_hash = url.split('/')[3:6]
+            payload = {'type':video_type, 'id':video_id, 'hash':video_hash}
+
+            html = get_html('https://kodik.info/gvi', post=payload, headers={'Referer':'https://shiza-project.com/'})
+            data = json.loads(html)
+
+            import base64
+            result['url'] = base64.standard_b64decode(data['links']['720'][0]['src'][::-1] + '===').decode('utf-8')
+
+
+        result['thumb'] = re.sub(r'^//', 'https://', result['thumb'])
+        result['url'] = re.sub(r'^//', 'https://', result['url'])
+    except:
+        pass
+
+    return result
+
+
 def parse_online_videos(urls):
     result = {'embed':'', 'url':'Видео недоступно', 'thumb':''}
 
@@ -169,6 +206,8 @@ def parse_online_videos(urls):
             result.update(_parse_vk(url))
         elif 'myvi.ru' in url:
             result.update(_parse_myvi(url))
+        elif any(x in url for x in ['kodik', 'aniqit', 'anivod']):
+            result.update(_parse_kodik(url))
 
         if result.get('url', '')[:4] == 'http':
             result['embed'] = url
@@ -188,6 +227,8 @@ def get_online_video_url(url):
             data = _parse_vk(url)
         elif 'myvi.ru' in url:
             data = _parse_myvi(url)
+        elif any(x in url for x in ['kodik', 'aniqit', 'anivod']):
+            data = _parse_kodik(url, False)
 
     url = data.get('url', '')
     if url[:4] == 'http':
