@@ -119,7 +119,7 @@ def _parse_sibnet(url):
 
             t = re.search(r'meta property="og:image" content="(.*?)"/>', html)
             if t:
-                result['thumb'] = t.group(1)
+                result['thumb'] = re.sub(r'^//', 'https://', t.group(1))
     except:
         pass
 
