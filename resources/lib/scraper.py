@@ -135,39 +135,6 @@ class ShizaScraper():
                         url = f'[COLOR red]{url}[/COLOR]'
                         items.append({'title':title, 'thumb':img, 'fanart':fanart, 'plot':url, 'type':'offline'})
 
-        # torrents
-        for torrent in release['torrents']:
-            title = torrent['synopsis'] if torrent['synopsis'] else f'{torrent["videoFormat"]} {torrent["videoQualities"][0]}'
-            title = '{0} ({1:.2f} GB)'.format(title, float(torrent['size']) / 1024 / 1024 / 1024)
-            plot = f'Seeders: {torrent["seeders"]}\n\n{torrent["metadata"]}'
-            items.append({'title':title, 'img':img, 'fanart':fanart, 'plot':plot, 'id':torrent['id'], 'type':'torrent'})
-
-        return items
-
-
-    def get_torrent(self, torrent_id):
-        return ShizaScraper.fetch('{0}/torrents/{1}/download'.format(api.BASE_URL, torrent_id))
-
-
-    def get_torrent_items(self, torrent_id):
-
-        torrent_data = self.get_torrent(torrent_id)
-
-        data = utils.bdecode(torrent_data)
-
-        items = []
-
-        files = data['info'].get('files', None)
-
-        if files == None:
-            title = '{0} ({1:.0f} MB)'.format(data['info']['name'], data['info']['length'] / 1024 // 1024)
-            items.append({'title':title, 'id':0})
-        else:
-            for i, f in enumerate(files):
-                title = '{0} ({1:.0f} MB)'.format(f['path'][-1], f['length'] / 1024 // 1024)
-                items.append({'title':title, 'id':i})
-            items = sorted(items, key=lambda x: x['title'])
-
         return items
 
 
@@ -177,6 +144,7 @@ class ShizaScraper():
         self._json = json.loads(answer)
         self._check_pagination()
         return self._parse_releases()
+
 
     def get_ongoing(self):
         query = api.get_ongoing_query(self.after)

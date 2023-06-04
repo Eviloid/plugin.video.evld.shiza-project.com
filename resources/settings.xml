@@ -1,14 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-  <category label="Просмотр">
-    <setting id="HideOnline" type="bool" label="Скрыть on-line" default="false" visible="true"/>
-    <setting type="sep"/>
-    <setting id="Engine" type="enum" label="Движок" default="0" values="TorrServer|T2Http|Elementum" visible="true"/>
-    <setting id="TSHost" type="text" label="Адрес сервера" default="127.0.0.1" visible="eq(-1,0)"/>
-    <setting id="TSPort" type="number" label="Порт" default="8090" visible="eq(-2,0)"/>
-    <setting id="Preload" type="slider" label="Предзагрузка (Mb)" default="20" range="5,5,50" visible="!eq(-3,2)" option="int"/>
-    <setting label="[B]Установить T2Http...[/B]" type="action" action="InstallAddon(script.module.torrent2http)" visible="eq(-4,1)"/>
-  </category>
   <category label="Авторизация">
     <setting id="User" label="Логин" type="text" default="" visible="true"/>
     <setting id="Password" label="Пароль" type="text" option="hidden" visible="true" enable="true" default="" />

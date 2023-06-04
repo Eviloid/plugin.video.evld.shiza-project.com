@@ -24,7 +24,6 @@ class Router():
             'info': self._show_info,
             'play': self._play,
             'radio': self._radio,
-            'torrent': self._show_torrent,
             'home': self._home,
             'cleancache': self._cleancache,
         }
@@ -139,25 +138,9 @@ class Router():
             elif type == 'offline':
                 self._add_item(title, {}, arts={'fanart':fanart, 'icon':self._plugin.icon}, plot=plot)
 
-            elif type == 'torrent':
-                self._add_item(title, {'mode':'torrent', 'release':self._params.get('id'), 'id':id}, arts={'fanart':fanart, 'banner':fanart, 'poster':image}, plot=plot, isFolder=True)
-
         xbmcplugin.setContent(self._plugin.handle, 'episodes')
         xbmcplugin.endOfDirectory(self._plugin.handle, True)
 
-    def _show_torrent(self):
-        scraper = ShizaScraper()
-
-        torrent_id = self._params.get('id')
-
-        items = scraper.get_torrent_items(torrent_id)
-
-        for i, item in enumerate(items):
-            self._add_item(item['title'], {'mode':'play', 'id':torrent_id, 'index':i, 'oindex':item['id']}, arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isPlayable=True)
-
-        xbmcplugin.setContent(self._plugin.handle, 'files')
-        xbmcplugin.endOfDirectory(self._plugin.handle, True)
-    
     def _search(self):
         keywords = self._params.get('query')
 
@@ -175,29 +158,6 @@ class Router():
         url = self._params.get('url') # online
         if url:
             url = utils.get_online_video_url(url)
-        else:
-            torrent_id = self._params.get('id')
-            index = int(self._params.get('index', 0))
-            oindex = int(self._params.get('oindex', 0))
-            preload_size = int(self._plugin.get_setting('Preload'))
-
-            torrent = ShizaScraper().get_torrent(torrent_id)
-
-            import player
-
-            if self._plugin.get_setting('Engine') == '0':
-                player.play_ts(self._plugin.handle, preload_size, self._plugin.get_setting('TSHost'), self._plugin.get_setting('TSPort'), torrent, index)
-            else:
-                temp_name = os.path.join(xbmcvfs.translatePath('special://masterprofile'), 'shiza.torrent')
-                temp_file = open(temp_name, "wb")
-                temp_file.write(torrent)
-                temp_file.close()
-
-                if self._plugin.get_setting('Engine') == '2':
-                    url ='plugin://plugin.video.elementum/play?uri='+ urlparse.quote_plus(temp_name) + '&index={0}&oindex={1}'.format(index, oindex)
-                else:
-                    uri = 'file:///' + temp_name.replace('\\', '/')
-                    player.play_t2h(self._plugin.handle, preload_size, uri, oindex)
 
         if url:
             item = xbmcgui.ListItem(path=url)
