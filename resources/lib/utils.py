@@ -12,6 +12,7 @@ USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 def get_html(url, params={}, post={}, headers={}):
     headers['User-Agent'] = USER_AGENT
     headers['Accept-Encoding'] = 'gzip, identity'
+    headers['Referer'] = 'https://shiza-project.com/'
 
     if params:
         url = '{0}?{1}'.format(url, urlparse.urlencode(params))
@@ -155,6 +156,16 @@ def _parse_vk(url):
 
 
 def _parse_kodik(url, info_only=True):
+
+    def decode_kodik(url):
+        keys   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+        result = 'NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm0123456789'
+
+        from base64 import standard_b64decode
+
+        return standard_b64decode(''.join(result[keys.index(k)] for k in url) + '===').decode('utf-8')
+
+
     result = {'url':'Видео недоступно', 'thumb':''}
 
     try:
@@ -176,11 +187,13 @@ def _parse_kodik(url, info_only=True):
             video_type, video_id, video_hash = url.split('/')[3:6]
             payload = {'type':video_type, 'id':video_id, 'hash':video_hash}
 
-            html = get_html('https://kodik.info/gvi', post=payload, headers={'Referer':'https://shiza-project.com/'})
+            host = urlparse.urlsplit(url).netloc
+
+            html = get_html('https://{}/gvi'.format(host), post=payload)
+            
             data = json.loads(html)
 
-            import base64
-            result['url'] = base64.standard_b64decode(data['links']['720'][0]['src'][::-1] + '===').decode('utf-8')
+            result['url'] = decode_kodik(data['links']['720'][0]['src'])
 
 
         result['thumb'] = re.sub(r'^//', 'https://', result['thumb'])
