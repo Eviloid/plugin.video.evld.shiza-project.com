@@ -92,7 +92,7 @@ query fetchReleases($first: Int, $after: String, $orderBy: ReleaseOrder, $query:
 
 fragment ReleasePosterCommon on ImageFile {
     id
-    preview: resize(width: 360, height: 500) {
+    preview: resize(width: 512, height: 712) {
         width
         height
         url
@@ -432,7 +432,7 @@ fragment ReleaseEpisodeCommon on ReleaseEpisode {
 
 fragment ReleasePosterCommon on ImageFile {
     id
-    preview: resize(width: 360, height: 500) {
+    preview: resize(width: 512, height: 712) {
         width
         height
         url
@@ -631,7 +631,7 @@ fragment CollectionCommon on Collection {
 
 fragment ReleasePosterCommon on ImageFile {
     id
-    preview: resize(width: 360, height: 500) {
+    preview: resize(width: 512, height: 712) {
         width
         height
         url
