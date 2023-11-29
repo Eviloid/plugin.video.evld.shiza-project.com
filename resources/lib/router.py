@@ -42,7 +42,7 @@ class Router():
         if isPlayable:
             item.setProperty('isPlayable', 'true')
             item.setProperty('mediatype', 'video')
-    
+
         xbmcplugin.addDirectoryItem(self._plugin.handle, url=url, listitem=item, isFolder=isFolder)
 
     def _login(self):
@@ -162,7 +162,7 @@ class Router():
         if url:
             item = xbmcgui.ListItem(path=url)
             xbmcplugin.setResolvedUrl(self._plugin.handle, True, item)
-        
+
     def _radio(self):
         item = xbmcgui.ListItem(path='https://radio.shiza-project.com/ara-ara')
         xbmcplugin.setResolvedUrl(self._plugin.handle, True, item)

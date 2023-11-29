@@ -90,7 +90,7 @@ def _parse_myvi(url):
         url = 'http://myvi.ru/player/api/Video/Get/' + s.group(1) + '?sig'
         try:
             headers = {'Cookie':'UniversalUserID=cda9eb54bfb042b3863d2157258dd51e'}
-            
+
             data = get_html(url, headers=headers)
             data = json.loads(data)
 
@@ -151,7 +151,7 @@ def _parse_vk(url):
             result['url'] = s[-1][1].replace(r'\/', '/')
     except:
         pass
-            
+
     return result
 
 
@@ -182,7 +182,7 @@ def _parse_kodik(url, info_only=True):
         else:
             s = re.search(r"data-code='(//.*?)'", html)
             if s:
-                url = s.group(1)    
+                url = s.group(1)
 
             video_type, video_id, video_hash = url.split('/')[3:6]
             payload = {'type':video_type, 'id':video_id, 'hash':video_hash}
@@ -190,7 +190,7 @@ def _parse_kodik(url, info_only=True):
             host = urlparse.urlsplit(url).netloc
 
             html = get_html('https://{}/gvi'.format(host), post=payload)
-            
+
             data = json.loads(html)
 
             result['url'] = decode_kodik(data['links']['720'][0]['src'])

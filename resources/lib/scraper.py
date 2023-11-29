@@ -26,7 +26,7 @@ class ShizaScraper():
     @property
     def total_page(self):
         return self._total_page
-    
+
     @classmethod
     def fetch(self, url, params={}, post={}, headers={}):
         return utils.get_html(url, params, post, headers)
@@ -67,7 +67,7 @@ class ShizaScraper():
                 announcement = node['announcement']
             elif node['episodesAired']:
                 announcement = 'Добавлена {:02d} серия'.format(node['episodesAired'])
-            
+
             original = node['originalName']
             genres = api.get_genres(node['genres'])
 
