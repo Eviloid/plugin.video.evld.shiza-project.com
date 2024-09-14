@@ -189,7 +189,7 @@ def _parse_kodik(url, info_only=True):
 
             host = urlparse.urlsplit(url).netloc
 
-            html = get_html('https://{}/gvi'.format(host), post=payload)
+            html = get_html('https://{}/ftor'.format(host), post=payload)
 
             data = json.loads(html)
 
