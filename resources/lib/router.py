@@ -23,7 +23,6 @@ class Router():
             'search': self._search,
             'info': self._show_info,
             'play': self._play,
-            'radio': self._radio,
             'home': self._home,
             'cleancache': self._cleancache,
         }
@@ -70,7 +69,6 @@ class Router():
         self._add_item('Онгоинги',           {'mode':'ongoing'},   arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
         self._add_item('В работе',           {'mode':'workin'},    arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
         self._add_item('Завершенные',        {'mode':'completed'}, arts={'fanart':self._plugin.fanart, 'icon':self._plugin.icon}, isFolder=True)
-        self._add_item('Радио Shiza-Project', {'mode':'radio'},    arts={'fanart':self._plugin.fanart, 'thumb':self._plugin.icon}, isPlayable=True, info={'watched':'False'})
         self._add_item('Поиск',              {'mode':'search'},    arts={'fanart':self._plugin.fanart, 'icon':'DefaultAddonsSearch.png'}, isFolder=True)
         xbmcplugin.endOfDirectory(self._plugin.handle, True)
 
@@ -162,10 +160,6 @@ class Router():
         if url:
             item = xbmcgui.ListItem(path=url)
             xbmcplugin.setResolvedUrl(self._plugin.handle, True, item)
-
-    def _radio(self):
-        item = xbmcgui.ListItem(path='https://radio.shiza-project.com/ara-ara')
-        xbmcplugin.setResolvedUrl(self._plugin.handle, True, item)
 
     def _home(self):
         xbmc.executebuiltin('Container.Update({}, replace)'.format(self._plugin.url))
