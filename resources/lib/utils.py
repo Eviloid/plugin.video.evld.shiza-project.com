@@ -159,7 +159,7 @@ def _parse_kodik(url, info_only=True):
 
     def decode_kodik(url):
         keys   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-        result = 'NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm0123456789'
+        result = 'STUVWXYZABCDEFGHIJKLMNOPQRstuvwxyzabcdefghijklmnopqr0123456789'
 
         from base64 import standard_b64decode
 
@@ -180,12 +180,18 @@ def _parse_kodik(url, info_only=True):
                 result['thumb'] =  thumbs[0].strip(' "')
 
         else:
-            s = re.search(r"data-code='(//.*?)'", html)
+            s = re.search(r"var urlParams = '(.*?)';", html)
             if s:
-                url = s.group(1)
+                data = json.loads(s.group(1))
 
-            video_type, video_id, video_hash = url.split('/')[3:6]
+            s = re.search(r"data-code='(.*?)'", html)
+            if s:
+                uri = s.group(1)
+
+            video_type, video_id, video_hash = uri.split('/')[3:6]
             payload = {'type':video_type, 'id':video_id, 'hash':video_hash}
+            payload.update(data)
+            payload['ref'] = urlparse.unquote_plus(payload['ref'])
 
             host = urlparse.urlsplit(url).netloc
 
