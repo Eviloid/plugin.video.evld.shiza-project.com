@@ -112,6 +112,7 @@ fragment ReleaseCard on Release {
     slug
     name
     originalName
+    description
     airedOn
     releasedOn
     publishedAt

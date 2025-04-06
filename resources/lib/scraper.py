@@ -78,6 +78,9 @@ class ShizaScraper():
             if node['season']:
                 plot = f'{plot}\n\nСезон: [COLOR ff137ddc]{api.get_season(node)}[/COLOR]'
 
+            if node['description']:
+                plot = f'{plot}\n\n{node["description"]}'
+
             id = node['id']
             img = api.get_poster(node)
 
