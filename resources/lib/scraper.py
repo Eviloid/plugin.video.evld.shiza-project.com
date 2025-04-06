@@ -120,7 +120,10 @@ class ShizaScraper():
                         items.append({'title':'Трейлер', 'thumb':thumb, 'fanart':fanart, 'url':video, 'type':'online'})
 
             for episode in release['episodes']:
-                title = f'{episode["number"]}. {episode["name"]}'
+                if episode['name']:
+                    title = f'{episode["number"]}. {episode["name"]}'
+                else:
+                    title = f'Серия {episode["number"]}'
 
                 if episode['videos']:
                     data = utils.parse_online_videos([v['embedUrl'] for v in episode['videos']])
